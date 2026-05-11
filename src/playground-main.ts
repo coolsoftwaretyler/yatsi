@@ -57,8 +57,6 @@ interface ParserTraceResult {
 // --- State ---
 
 let engine: YatsiEngine | null = null;
-let activeTab = 'tokens';
-let lastResult: PipelineResult | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Step mode state
@@ -101,7 +99,6 @@ function escapeHtml(str: string): string {
 // --- Tab switching ---
 
 function switchTab(name: string): void {
-  activeTab = name;
   for (const btn of tabs) {
     btn.classList.toggle('active', btn.dataset.tab === name);
   }
@@ -169,7 +166,6 @@ function renderErrors(errors: string[]): string {
 }
 
 function renderResult(result: PipelineResult): void {
-  lastResult = result;
   renderTokens(result.tokens, -1);
 
   if (!result.ok) {
@@ -202,7 +198,6 @@ function runPipeline(): void {
     panels.ast.textContent = '';
     panels.bytecode.textContent = '';
     panels.output.textContent = '';
-    lastResult = null;
     return;
   }
 
@@ -447,7 +442,6 @@ function renderLexerStepInfo(step: LexerStep): void {
 
 function renderLexerSourceForStep(step: LexerStep): void {
   let tokenBuildStart = -1;
-  let tokenBuildEnd = -1;
   const data = stepData as LexerTraceResult;
 
   for (let i = stepIndex; i >= 0; i--) {
@@ -457,16 +451,6 @@ function renderLexerSourceForStep(step: LexerStep): void {
     }
     if (data.steps[i].type === 'emit' || data.steps[i].type === 'eof') {
       break;
-    }
-  }
-
-  if (tokenBuildStart >= 0) {
-    if (step.type === 'emit') {
-      tokenBuildEnd = step.endPos;
-    } else if (step.type !== 'scanStart') {
-      tokenBuildEnd = step.endPos;
-    } else {
-      tokenBuildEnd = step.pos;
     }
   }
 
