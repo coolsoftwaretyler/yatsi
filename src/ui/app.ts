@@ -1,4 +1,4 @@
-import { el } from './components';
+import { el, siteFooter } from './components';
 import { Controls } from './controls';
 import { ProgressPanel } from './progress';
 import { TestTree } from './test-tree';
@@ -62,6 +62,7 @@ export class App {
 
     this.root.appendChild(header);
     this.root.appendChild(main);
+    this.root.appendChild(siteFooter());
     this.setStatus('Load a test262 zip to begin.');
   }
 

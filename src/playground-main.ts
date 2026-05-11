@@ -1,4 +1,4 @@
-import { el } from './ui/components';
+import { el, siteFooter } from './ui/components';
 import { YatsiEngine } from './engine/wasm-engine';
 
 // --- Types ---
@@ -773,6 +773,7 @@ function buildPlayground(): void {
 
   root.appendChild(header);
   root.appendChild(playground);
+  root.appendChild(siteFooter());
 
   // --- Wire up events ---
 

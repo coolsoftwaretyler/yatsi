@@ -32,3 +32,16 @@ export function clearChildren(elem: HTMLElement): void {
     elem.removeChild(elem.firstChild);
   }
 }
+
+export function siteFooter(): HTMLElement {
+  return el('footer', { className: 'site-footer' },
+    el('span', {},
+      el('a', { href: 'https://github.com/coolsoftwaretyler/yatsi', target: '_blank' }, 'GitHub'),
+    ),
+    el('span', {}, 'MIT License'),
+    el('span', {},
+      'Built by ',
+      el('a', { href: 'https://infinite.red/about#:~:text=Staff%20Software%20Engineer-,Tyler%20Williams,-Staff%20Software%20Engineer', target: '_blank' }, 'Tyler Williams'),
+    ),
+  );
+}

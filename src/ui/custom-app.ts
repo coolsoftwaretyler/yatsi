@@ -1,4 +1,4 @@
-import { el } from './components';
+import { el, siteFooter } from './components';
 import { ProgressPanel } from './progress';
 import { TestTree } from './test-tree';
 import { ResultsPanel, type TestSourceInfo } from './results-panel';
@@ -75,6 +75,7 @@ export class CustomApp {
 
     this.root.appendChild(header);
     this.root.appendChild(main);
+    this.root.appendChild(siteFooter());
 
     this.loadTests();
   }

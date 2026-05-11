@@ -1,4 +1,4 @@
-import { el } from './ui/components';
+import { el, siteFooter } from './ui/components';
 
 function init(): void {
   const root = document.getElementById('app')!;
@@ -30,6 +30,7 @@ function init(): void {
   root.appendChild(header);
   root.appendChild(intro);
   root.appendChild(cards);
+  root.appendChild(siteFooter());
 }
 
 init();
