@@ -158,6 +158,10 @@ struct ReturnStmt {
   ExprPtr value; // nullptr for bare return
 };
 
+struct BreakStmt {};
+
+struct ContinueStmt {};
+
 // --- Expr / Stmt variant wrappers ---
 
 struct Expr : std::variant<NumberLiteral, StringLiteral, BooleanLiteral,
@@ -170,7 +174,7 @@ struct Expr : std::variant<NumberLiteral, StringLiteral, BooleanLiteral,
 };
 
 struct Stmt : std::variant<ExpressionStmt, VarDeclaration, BlockStmt, IfStmt,
-                           WhileStmt, ForStmt, FunctionDecl, ReturnStmt> {
+                           WhileStmt, ForStmt, FunctionDecl, ReturnStmt, BreakStmt, ContinueStmt> {
   using variant::variant;
   SourceLocation location;
 };
