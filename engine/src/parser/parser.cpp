@@ -337,7 +337,18 @@ StmtPtr Parser::parse_statement() {
     result = parse_return_statement();
   } else if (check(TokenKind::Function)) {
     result = parse_function_declaration();
-  } else {
+  } else if (check(TokenKind::Break)) {
+    auto loc = current().location;
+    advance();
+    expect(TokenKind::Semicolon, "Expected ';' after break");
+    return make_stmt(BreakStmt{}, loc);
+  } else if (check(TokenKind::Continue)) {
+    auto loc = current().location;
+    advance();
+    expect(TokenKind::Semicolon, "Expected ';' after continue");
+    return make_stmt(ContinueStmt{}, loc);
+  }
+  else {
     result = parse_expression_statement();
   }
   if (result) {
