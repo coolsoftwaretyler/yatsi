@@ -1,9 +1,13 @@
 import type { AssembledTest, TestResult } from '../types/test262';
-import type { WorkerResponse } from '../types/engine';
+import type { EvalResult, WorkerResponse } from '../types/engine';
 import { interpretResult } from './result-interpreter';
 
 export type ResultCallback = (result: TestResult) => void;
 export type ProgressCallback = (completed: number, total: number) => void;
+export type ResultInterpreter = (
+  evalResult: EvalResult,
+  test: AssembledTest,
+) => { outcome: TestResult['outcome']; errorType: string; errorMessage: string };
 
 interface PendingTask {
   test: AssembledTest;
@@ -32,17 +36,20 @@ export class TestExecutor {
   private onProgress: ProgressCallback;
   private timeout: number;
   private concurrency: number;
+  private customInterpreter?: ResultInterpreter;
 
   constructor(opts: {
     concurrency?: number;
     timeout?: number;
     onResult: ResultCallback;
     onProgress: ProgressCallback;
+    interpreter?: ResultInterpreter;
   }) {
     this.concurrency = opts.concurrency ?? 4;
     this.timeout = opts.timeout ?? 10000;
     this.onResult = opts.onResult;
     this.onProgress = opts.onProgress;
+    this.customInterpreter = opts.interpreter;
   }
 
   async start(tests: AssembledTest[]): Promise<void> {
@@ -133,11 +140,9 @@ export class TestExecutor {
       slot.pending = null;
 
       const elapsed = performance.now() - task.startTime;
-      const interpretation = interpretResult(
-        msg.result!,
-        task.test.metadata,
-        task.test.scenario,
-      );
+      const interpretation = this.customInterpreter
+        ? this.customInterpreter(msg.result!, task.test)
+        : interpretResult(msg.result!, task.test.metadata, task.test.scenario);
 
       const result: TestResult = {
         testPath: task.test.testPath,

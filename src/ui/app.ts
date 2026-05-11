@@ -38,9 +38,14 @@ export class App {
   }
 
   init(): void {
+    const nav = el('nav', { className: 'app-nav' },
+      el('a', { href: './custom.html' }, 'Custom Tests'),
+    );
+
     const header = el('header', { className: 'app-header' },
       el('h1', {}, 'Yatsi'),
       el('p', { className: 'subtitle' }, 'Test262 Web Runner'),
+      nav,
     );
 
     const main = el('main', { className: 'app-main' },

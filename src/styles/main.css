@@ -50,6 +50,20 @@ body {
   font-size: 14px;
 }
 
+.app-nav {
+  margin-top: 8px;
+}
+
+.app-nav a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.app-nav a:hover {
+  text-decoration: underline;
+}
+
 /* Controls */
 .controls {
   margin-bottom: 16px;
@@ -377,11 +391,44 @@ body {
   font-size: 10px;
 }
 
+.failure-outcome-pass {
+  background: rgba(76, 175, 80, 0.2);
+  color: var(--pass);
+}
+
 .failure-overflow {
   padding: 8px;
   text-align: center;
   color: var(--text-dim);
   font-style: italic;
+}
+
+/* Source display */
+.source-section {
+  margin-bottom: 8px;
+}
+
+.source-label {
+  color: var(--text-dim);
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.source-code {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
 }
 
 /* Responsive */

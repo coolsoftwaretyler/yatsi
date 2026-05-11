@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { resolve } from 'path';
 import fs from 'fs';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
@@ -8,6 +9,12 @@ export default defineConfig({
   base: './',
   build: {
     target: 'esnext',
+    rollupOptions: {
+      input: {
+        index: resolve(__dirname, 'index.html'),
+        custom: resolve(__dirname, 'custom.html'),
+      },
+    },
   },
   worker: {
     format: 'es',
