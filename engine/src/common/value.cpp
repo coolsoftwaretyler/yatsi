@@ -37,7 +37,7 @@ Value Value::undefined() {
   return v;
 }
 
-Value Value::object(HeapObject* obj) {
+Value Value::object(HeapObject *obj) {
   Value v;
   v.kind_ = ValueKind::Object;
   v.object_ = obj;
@@ -56,7 +56,7 @@ bool Value::as_boolean() const {
   return boolean_;
 }
 
-HeapObject* Value::as_object() const {
+HeapObject *Value::as_object() const {
   assert(is_object() && "Value is not an object");
   return object_;
 }
@@ -66,9 +66,9 @@ bool Value::is_string() const {
          object_->heap_kind() == HeapObjectKind::String;
 }
 
-JsString* Value::as_string() const {
+JsString *Value::as_string() const {
   assert(is_string() && "Value is not a string");
-  return static_cast<JsString*>(object_);
+  return static_cast<JsString *>(object_);
 }
 
 // --- JS truthiness ---
@@ -83,14 +83,17 @@ bool Value::is_truthy() const {
   case ValueKind::Undefined:
     return false;
   case ValueKind::Object:
-    return true; // all objects are truthy in JS
+    // Strings are special: empty string is falsy
+    if (is_string())
+      return !as_string()->data().empty();
+    return true; // all other objects are truthy in JS
   }
   return false; // unreachable
 }
 
 // --- Strict equality (===) ---
 
-bool Value::strict_equals(const Value& other) const {
+bool Value::strict_equals(const Value &other) const {
   if (kind_ != other.kind_)
     return false;
   switch (kind_) {
@@ -111,7 +114,7 @@ bool Value::strict_equals(const Value& other) const {
 // --- Abstract equality (==) ---
 
 // Helper: try to convert a Value to a number for coercion
-static double to_number(const Value& v) {
+static double to_number(const Value &v) {
   switch (v.kind()) {
   case ValueKind::Number:
     return v.as_number();
@@ -141,7 +144,7 @@ static double to_number(const Value& v) {
   return std::numeric_limits<double>::quiet_NaN();
 }
 
-bool Value::abstract_equals(const Value& other) const {
+bool Value::abstract_equals(const Value &other) const {
   // Same type: use strict equality
   if (kind_ == other.kind_)
     return strict_equals(other);

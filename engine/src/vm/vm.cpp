@@ -242,6 +242,22 @@ InterpretResult VM::execute(BytecodeFunction& func) {
       break;
     }
 
+    // --- Control flow ---
+
+       case OpCode::Jump:
+      cf.ip += instr.sbx();
+      break;
+
+    case OpCode::JumpIfTrue:
+      if (reg(instr.a()).is_truthy())
+        cf.ip += instr.sbx();
+      break;
+
+    case OpCode::JumpIfFalse:
+      if (!reg(instr.a()).is_truthy())
+        cf.ip += instr.sbx();
+      break;
+
     case OpCode::ReturnUndef:
       call_stack_.pop_back();
       if (call_stack_.empty())
