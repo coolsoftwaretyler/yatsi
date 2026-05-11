@@ -2,6 +2,7 @@
 
 #include <string>
 
+// Return type for a TypeScript evaluation, intended to be passed back to JavaScript via Emscripten as a simple object.
 struct EvalResult {
     bool success;
     std::string error_type;

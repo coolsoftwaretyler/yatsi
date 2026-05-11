@@ -3,6 +3,7 @@
 
 using namespace emscripten;
 
+// Bind the evaluate method to JavaScript, allowing it to be called from JS and return an EvalResult object. The EvalResult struct is also bound so that its fields can be accessed from JavaScript.
 EMSCRIPTEN_BINDINGS(yatsi) {
     value_object<EvalResult>("EvalResult")
         .field("success", &EvalResult::success)

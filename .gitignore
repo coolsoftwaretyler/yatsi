@@ -1,6 +1,7 @@
 node_modules/
 dist/
 engine/build/
+engine/build-native/
 src/engine/wasm/*.wasm
 *.log
 .DS_Store
