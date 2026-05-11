@@ -1,5 +1,7 @@
 import { el } from './components';
 
+const DEFAULT_TEST262_URL = '/api/test262-zip';
+
 export interface ControlsCallbacks {
   onLoadFile: (file: File) => void;
   onLoadUrl: (url: string) => void;
@@ -34,6 +36,7 @@ export class Controls {
       type: 'text',
       placeholder: 'test262 zip URL...',
       className: 'url-input',
+      value: DEFAULT_TEST262_URL,
     });
     this.loadUrlBtn = el('button', { className: 'btn btn-secondary' }, 'Load URL');
     this.loadUrlBtn.addEventListener('click', () => {

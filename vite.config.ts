@@ -31,6 +31,13 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
+    proxy: {
+      '/api/test262-zip': {
+        target: 'https://codeload.github.com',
+        changeOrigin: true,
+        rewrite: () => '/nicolo-ribaudo/test262/zip/refs/heads/main',
+      },
+    },
   },
   optimizeDeps: {
     exclude: ['src/engine/wasm/yatsi.js'],
