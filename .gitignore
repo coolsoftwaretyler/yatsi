@@ -1,0 +1,6 @@
+node_modules/
+dist/
+engine/build/
+src/engine/wasm/
+*.log
+.DS_Store
