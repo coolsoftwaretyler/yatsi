@@ -1,0 +1,31 @@
+import { el } from './ui/components';
+
+function init(): void {
+  const root = document.getElementById('app')!;
+
+  const header = el('header', { className: 'home-header' },
+    el('h1', {}, 'YATSI'),
+    el('p', { className: 'home-tagline' }, 'Yet Another TypeScript Implementation'),
+  );
+
+  const intro = el('p', { className: 'home-intro' },
+    'A from-scratch TypeScript compiler and runtime, tested against the ECMAScript specification.',
+  );
+
+  const cards = el('div', { className: 'home-cards' },
+    el('a', { className: 'home-card', href: './test262/' },
+      el('h2', {}, 'Test262 Runner'),
+      el('p', {}, 'Run the official ECMAScript conformance test suite against the Yatsi engine.'),
+    ),
+    el('a', { className: 'home-card', href: './custom/' },
+      el('h2', {}, 'Custom Tests'),
+      el('p', {}, 'Run hand-written tests for language features under active development.'),
+    ),
+  );
+
+  root.appendChild(header);
+  root.appendChild(intro);
+  root.appendChild(cards);
+}
+
+init();

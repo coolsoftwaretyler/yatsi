@@ -39,7 +39,8 @@ export class App {
 
   init(): void {
     const nav = el('nav', { className: 'app-nav' },
-      el('a', { href: './custom.html' }, 'Custom Tests'),
+      el('a', { href: '../' }, 'Home'),
+      el('a', { href: '../custom/' }, 'Custom Tests'),
     );
 
     const header = el('header', { className: 'app-header' },

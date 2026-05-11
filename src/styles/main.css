@@ -52,6 +52,8 @@ body {
 
 .app-nav {
   margin-top: 8px;
+  display: flex;
+  gap: 16px;
 }
 
 .app-nav a {
@@ -431,9 +433,82 @@ body {
   margin: 0;
 }
 
+/* Home page */
+.home-header {
+  text-align: center;
+  margin-top: 80px;
+  margin-bottom: 16px;
+}
+
+.home-header h1 {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+
+.home-tagline {
+  color: var(--text-dim);
+  font-size: 16px;
+  margin-top: 4px;
+}
+
+.home-intro {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 14px;
+  max-width: 540px;
+  margin: 0 auto 48px;
+}
+
+.home-cards {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.home-card {
+  display: block;
+  width: 280px;
+  padding: 24px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.home-card:hover {
+  border-color: var(--accent);
+  background: var(--bg-tertiary);
+}
+
+.home-card h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.home-card p {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
 /* Responsive */
 @media (max-width: 800px) {
   .app-content {
     grid-template-columns: 1fr;
+  }
+
+  .home-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .home-header {
+    margin-top: 40px;
   }
 }
