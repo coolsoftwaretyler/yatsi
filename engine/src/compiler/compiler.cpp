@@ -6,14 +6,14 @@
 
 namespace yatsi {
 
-Compiler::Compiler(GarbageCollector& gc) : gc_(gc) {}
+Compiler::Compiler(GarbageCollector &gc) : gc_(gc) {}
 
-BytecodeFunction Compiler::compile(const Program& program) {
+BytecodeFunction Compiler::compile(const Program &program) {
   BytecodeFunction func;
   func.name = "<script>";
   current_function_ = &func;
 
-  for (const auto& stmt : program.body) {
+  for (const auto &stmt : program.body) {
     compile_stmt(*stmt);
   }
 
@@ -33,9 +33,9 @@ uint8_t Compiler::allocate_register() {
 
 uint16_t Compiler::add_constant(Value val) {
   // Deduplicate number constants
-  auto& constants = current_function_->constants;
+  auto &constants = current_function_->constants;
   for (size_t i = 0; i < constants.size(); ++i) {
-    const auto& existing = constants[i];
+    const auto &existing = constants[i];
     if (val.is_number() && existing.is_number() &&
         val.as_number() == existing.as_number()) {
       return static_cast<uint16_t>(i);
@@ -48,13 +48,13 @@ uint16_t Compiler::add_constant(Value val) {
 
 // --- String constant helper ---
 
-uint16_t Compiler::add_string_constant(const std::string& str) {
+uint16_t Compiler::add_string_constant(const std::string &str) {
   std::u16string utf16;
   utf16.reserve(str.size());
   for (char ch : str) {
     utf16.push_back(static_cast<char16_t>(static_cast<unsigned char>(ch)));
   }
-  auto* js_str = gc_.allocate<JsString>(std::move(utf16));
+  auto *js_str = gc_.allocate<JsString>(std::move(utf16));
   return add_constant(Value::object(js_str));
 }
 
@@ -72,39 +72,83 @@ void Compiler::emit_abx(OpCode op, uint8_t a, uint16_t bx) {
   emit(Instruction::abx(op, a, bx));
 }
 
+void Compiler::emit_asbx(OpCode op, uint8_t a, int16_t sbx) {
+  emit(Instruction::asbx(op, a, sbx));
+}
+
+size_t Compiler::emit_jump(OpCode op, uint8_t a) {
+  size_t index = current_function_->code.size();
+  emit_asbx(op, a, 0); // placeholder offset
+  return index;
+}
+
+void Compiler::patch_jump(size_t index) {
+  patch_jump_to(index, current_function_->code.size());
+}
+
+void Compiler::patch_jump_to(size_t index, size_t target) {
+  int16_t offset = static_cast<int16_t>(target - index - 1);
+  auto &instr = current_function_->code[index];
+  // Rebuild the instruction preserving opcode and A field, replacing sBx
+  instr = Instruction::asbx(instr.opcode(), instr.a(), offset);
+}
+
+size_t Compiler::current_offset() { return current_function_->code.size(); }
+
 // --- TokenKind to OpCode mapping ---
 
 static OpCode binary_op(TokenKind kind) {
   switch (kind) {
-  case TokenKind::Plus: return OpCode::Add;
-  case TokenKind::Minus: return OpCode::Sub;
-  case TokenKind::Star: return OpCode::Mul;
-  case TokenKind::Slash: return OpCode::Div;
-  case TokenKind::Percent: return OpCode::Mod;
-  case TokenKind::StarStar: return OpCode::Pow;
-  case TokenKind::Ampersand: return OpCode::BitAnd;
-  case TokenKind::Pipe: return OpCode::BitOr;
-  case TokenKind::Caret: return OpCode::BitXor;
-  case TokenKind::LessLess: return OpCode::ShiftLeft;
-  case TokenKind::GreaterGreater: return OpCode::ShiftRight;
-  case TokenKind::GreaterGreaterGreater: return OpCode::ShiftRightU;
-  case TokenKind::EqualEqual: return OpCode::Equal;
-  case TokenKind::BangEqual: return OpCode::NotEqual;
-  case TokenKind::EqualEqualEqual: return OpCode::StrictEqual;
-  case TokenKind::BangEqualEqual: return OpCode::StrictNotEqual;
-  case TokenKind::Less: return OpCode::LessThan;
-  case TokenKind::LessEqual: return OpCode::LessEqual;
-  case TokenKind::Greater: return OpCode::GreaterThan;
-  case TokenKind::GreaterEqual: return OpCode::GreaterEqual;
-  default: return OpCode::Add; // unreachable for valid AST
+  case TokenKind::Plus:
+    return OpCode::Add;
+  case TokenKind::Minus:
+    return OpCode::Sub;
+  case TokenKind::Star:
+    return OpCode::Mul;
+  case TokenKind::Slash:
+    return OpCode::Div;
+  case TokenKind::Percent:
+    return OpCode::Mod;
+  case TokenKind::StarStar:
+    return OpCode::Pow;
+  case TokenKind::Ampersand:
+    return OpCode::BitAnd;
+  case TokenKind::Pipe:
+    return OpCode::BitOr;
+  case TokenKind::Caret:
+    return OpCode::BitXor;
+  case TokenKind::LessLess:
+    return OpCode::ShiftLeft;
+  case TokenKind::GreaterGreater:
+    return OpCode::ShiftRight;
+  case TokenKind::GreaterGreaterGreater:
+    return OpCode::ShiftRightU;
+  case TokenKind::EqualEqual:
+    return OpCode::Equal;
+  case TokenKind::BangEqual:
+    return OpCode::NotEqual;
+  case TokenKind::EqualEqualEqual:
+    return OpCode::StrictEqual;
+  case TokenKind::BangEqualEqual:
+    return OpCode::StrictNotEqual;
+  case TokenKind::Less:
+    return OpCode::LessThan;
+  case TokenKind::LessEqual:
+    return OpCode::LessEqual;
+  case TokenKind::Greater:
+    return OpCode::GreaterThan;
+  case TokenKind::GreaterEqual:
+    return OpCode::GreaterEqual;
+  default:
+    return OpCode::Add; // unreachable for valid AST
   }
 }
 
 // --- Statement compilation ---
 
-void Compiler::compile_stmt(const Stmt& stmt) {
+void Compiler::compile_stmt(const Stmt &stmt) {
   std::visit(
-      [&](const auto& node) {
+      [&](const auto &node) {
         using T = std::decay_t<decltype(node)>;
         if constexpr (std::is_same_v<T, ExpressionStmt>) {
           compile_expr(*node.expression);
@@ -123,32 +167,125 @@ void Compiler::compile_stmt(const Stmt& stmt) {
           }
 
         } else if constexpr (std::is_same_v<T, BlockStmt>) {
-          for (const auto& s : node.statements) {
+          for (const auto &s : node.statements) {
             compile_stmt(*s);
           }
 
         } else if constexpr (std::is_same_v<T, IfStmt>) {
-          std::cerr << "warning: IfStmt not yet compiled\n";
+          uint8_t cond_reg = compile_expr(*node.condition);
+          size_t jump_else = emit_jump(OpCode::JumpIfFalse, cond_reg);
+          compile_stmt(*node.consequent);
+          if (node.alternate) {
+            size_t jump_end = emit_jump(OpCode::Jump);
+            patch_jump(jump_else);
+            compile_stmt(*node.alternate);
+            patch_jump(jump_end);
+          } else {
+            patch_jump(jump_else);
+          }
         } else if constexpr (std::is_same_v<T, WhileStmt>) {
-          std::cerr << "warning: WhileStmt not yet compiled\n";
+          size_t loop_start = current_offset();
+          loop_stack_.push_back(LoopContext{loop_start, {}, {}, false});
+
+          uint8_t cond_reg = compile_expr(*node.condition);
+          size_t exit_jump = emit_jump(OpCode::JumpIfFalse, cond_reg);
+          compile_stmt(*node.body);
+
+          // Jump back to loop_start
+          size_t back_jump_idx = current_offset();
+          int16_t back_offset =
+              static_cast<int16_t>(loop_start - back_jump_idx - 1);
+          emit_asbx(OpCode::Jump, 0, back_offset);
+          patch_jump(exit_jump);
+
+          // Patch break jumps to here (after exit)
+          auto &ctx = loop_stack_.back();
+
+          for (size_t idx : ctx.break_jumps)
+            patch_jump(idx);
+          loop_stack_.pop_back();
         } else if constexpr (std::is_same_v<T, ForStmt>) {
-          std::cerr << "warning: ForStmt not yet compiled\n";
+          // Compile initializer
+          if (node.init)
+            compile_stmt(*node.init);
+
+          size_t loop_start = current_offset();
+          loop_stack_.push_back(LoopContext{0, {}, {}, true});
+
+          // Compile condition (if present)
+          size_t exit_jump = 0;
+          bool has_condition = node.condition != nullptr;
+          if (has_condition) {
+            uint8_t cond_reg = compile_expr(*node.condition);
+            exit_jump = emit_jump(OpCode::JumpIfFalse, cond_reg);
+          }
+
+          // Compile body
+          compile_stmt(*node.body);
+
+          // Patch continue jumps to the update expression
+          size_t update_start = current_offset();
+          auto &ctx = loop_stack_.back();
+          ctx.continue_target = update_start;
+          for (size_t idx : ctx.continue_jumps) {
+            patch_jump_to(idx, update_start);
+          }
+
+          // Compile update
+          if (node.update)
+            compile_expr(*node.update);
+
+          // Jump back to loop_start
+          size_t back_jump_idx = current_offset();
+          int16_t back_offset =
+              static_cast<int16_t>(loop_start - back_jump_idx - 1);
+          emit_asbx(OpCode::Jump, 0, back_offset);
+
+          if (has_condition)
+            patch_jump(exit_jump);
+
+          // Patch break jumps to here (after exit)
+          for (size_t idx : ctx.break_jumps)
+            patch_jump(idx);
+          loop_stack_.pop_back();
+
+        } else if constexpr (std::is_same_v<T, BreakStmt>) {
+          if (!loop_stack_.empty()) {
+            size_t jump_idx = emit_jump(OpCode::Jump);
+            loop_stack_.back().break_jumps.push_back(jump_idx);
+          }
+
+        } else if constexpr (std::is_same_v<T, ContinueStmt>) {
+          if (!loop_stack_.empty()) {
+            auto &ctx = loop_stack_.back();
+            if (ctx.is_for_loop) {
+              // Defer: we don't know the update position yet
+              size_t jump_idx = emit_jump(OpCode::Jump);
+              ctx.continue_jumps.push_back(jump_idx);
+            } else {
+              // While loop: jump back to condition
+              size_t jump_idx = current_offset();
+              int16_t offset =
+                  static_cast<int16_t>(ctx.continue_target - jump_idx - 1);
+              emit_asbx(OpCode::Jump, 0, offset);
+            }
+          }
         } else if constexpr (std::is_same_v<T, FunctionDecl>) {
           std::cerr << "warning: FunctionDecl not yet compiled\n";
         } else if constexpr (std::is_same_v<T, ReturnStmt>) {
           std::cerr << "warning: ReturnStmt not yet compiled\n";
         }
       },
-      static_cast<const Stmt::variant&>(stmt));
+      static_cast<const Stmt::variant &>(stmt));
 }
 
 // --- Expression compilation ---
 
-uint8_t Compiler::compile_expr(const Expr& expr) {
+uint8_t Compiler::compile_expr(const Expr &expr) {
   uint8_t dest = 0;
 
   std::visit(
-      [&](const auto& node) {
+      [&](const auto &node) {
         using T = std::decay_t<decltype(node)>;
         if constexpr (std::is_same_v<T, NumberLiteral>) {
           dest = allocate_register();
@@ -179,10 +316,30 @@ uint8_t Compiler::compile_expr(const Expr& expr) {
           emit_abx(OpCode::GetGlobal, dest, name_idx);
 
         } else if constexpr (std::is_same_v<T, BinaryExpr>) {
-          uint8_t left = compile_expr(*node.left);
-          uint8_t right = compile_expr(*node.right);
-          dest = allocate_register();
-          emit_abc(binary_op(node.op), dest, left, right);
+          if (node.op == TokenKind::AmpersandAmpersand) {
+            // a && b: short-circuit — if a is falsy, result is a; otherwise b
+            uint8_t left = compile_expr(*node.left);
+            dest = allocate_register();
+            emit_abc(OpCode::Move, dest, left, 0);
+            size_t skip_jump = emit_jump(OpCode::JumpIfFalse, dest);
+            uint8_t right = compile_expr(*node.right);
+            emit_abc(OpCode::Move, dest, right, 0);
+            patch_jump(skip_jump);
+          } else if (node.op == TokenKind::PipePipe) {
+            // a || b: short-circuit — if a is truthy, result is a; otherwise b
+            uint8_t left = compile_expr(*node.left);
+            dest = allocate_register();
+            emit_abc(OpCode::Move, dest, left, 0);
+            size_t skip_jump = emit_jump(OpCode::JumpIfTrue, dest);
+            uint8_t right = compile_expr(*node.right);
+            emit_abc(OpCode::Move, dest, right, 0);
+            patch_jump(skip_jump);
+          } else {
+            uint8_t left = compile_expr(*node.left);
+            uint8_t right = compile_expr(*node.right);
+            dest = allocate_register();
+            emit_abc(binary_op(node.op), dest, left, right);
+          }
 
         } else if constexpr (std::is_same_v<T, UnaryExpr>) {
           uint8_t operand = compile_expr(*node.operand);
@@ -201,22 +358,23 @@ uint8_t Compiler::compile_expr(const Expr& expr) {
 
         } else if constexpr (std::is_same_v<T, AssignmentExpr>) {
           // Only simple assignment to identifiers for now
-          if (auto* ident = std::get_if<Identifier>(&*node.target)) {
+          if (auto *ident = std::get_if<Identifier>(&*node.target)) {
             uint8_t val_reg = compile_expr(*node.value);
             uint16_t name_idx = add_string_constant(ident->name);
             emit_abx(OpCode::SetGlobal, val_reg, name_idx);
             dest = val_reg;
           } else {
             dest = allocate_register();
-            std::cerr << "warning: complex assignment target not yet compiled\n";
+            std::cerr
+                << "warning: complex assignment target not yet compiled\n";
           }
 
         } else if constexpr (std::is_same_v<T, CallExpr>) {
           // Check for console.log(...) pattern
           bool is_console_log = false;
-          if (auto* member = std::get_if<MemberExpr>(&*node.callee)) {
+          if (auto *member = std::get_if<MemberExpr>(&*node.callee)) {
             if (!member->is_computed && member->property == "log") {
-              if (auto* obj = std::get_if<Identifier>(&*member->object)) {
+              if (auto *obj = std::get_if<Identifier>(&*member->object)) {
                 if (obj->name == "console") {
                   is_console_log = true;
                 }
@@ -227,7 +385,7 @@ uint8_t Compiler::compile_expr(const Expr& expr) {
           if (is_console_log) {
             // Compile each argument, then move results into consecutive regs
             std::vector<uint8_t> arg_regs;
-            for (const auto& arg : node.arguments) {
+            for (const auto &arg : node.arguments) {
               arg_regs.push_back(compile_expr(*arg));
             }
             // Allocate a consecutive block for Print
@@ -272,7 +430,7 @@ uint8_t Compiler::compile_expr(const Expr& expr) {
           std::cerr << "warning: TemplateLiteral not yet compiled\n";
         }
       },
-      static_cast<const Expr::variant&>(expr));
+      static_cast<const Expr::variant &>(expr));
 
   return dest;
 }
