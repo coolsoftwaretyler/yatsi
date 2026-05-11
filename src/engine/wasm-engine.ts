@@ -10,6 +10,9 @@ interface WasmEvalResult {
 
 interface YatsiModule {
   evaluate(source: string): WasmEvalResult;
+  run_pipeline(source: string): string;
+  tokenize_traced(source: string): string;
+  parse_traced(source: string): string;
 }
 
 type CreateYatsi = () => Promise<YatsiModule>;
@@ -39,6 +42,18 @@ export class YatsiEngine {
       phase: PHASE_MAP[raw.phase] ?? 'runtime',
       consoleOutput: raw.console_output,
     };
+  }
+
+  runPipeline(source: string): string {
+    return this.module.run_pipeline(source);
+  }
+
+  tokenizeTraced(source: string): string {
+    return this.module.tokenize_traced(source);
+  }
+
+  parseTraced(source: string): string {
+    return this.module.parse_traced(source);
   }
 
   destroy(): void {

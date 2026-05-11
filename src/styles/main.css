@@ -2,6 +2,7 @@
   --bg: #1a1a2e;
   --bg-secondary: #16213e;
   --bg-tertiary: #0f3460;
+  --bg-editor: #0f0f1a;
   --text: #e4e4e4;
   --text-dim: #8a8a9a;
   --accent: #4a9eff;
@@ -510,5 +511,564 @@ body {
 
   .home-header {
     margin-top: 40px;
+  }
+}
+
+/* ========================================
+   Playground
+   ======================================== */
+
+.playground {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: calc(100vh - 120px);
+}
+
+/* Editor pane */
+.playground .editor-pane {
+  display: flex;
+  flex-direction: column;
+  width: 50%;
+  border-right: 1px solid var(--border);
+}
+
+.playground .editor-pane label {
+  display: block;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+
+.playground #editor {
+  flex: 1;
+  width: 100%;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 16px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  background: var(--bg-editor);
+  color: var(--text);
+  tab-size: 2;
+}
+
+/* Output pane */
+.playground .output-pane {
+  display: flex;
+  flex-direction: column;
+  width: 50%;
+  overflow: hidden;
+}
+
+/* Tab bar */
+.playground .tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.playground .tab-bar button {
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.playground .tab-bar button:hover {
+  color: var(--text);
+}
+
+.playground .tab-bar button.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+/* Panels */
+.playground .panel {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg-editor);
+  display: none;
+}
+
+.playground .panel.active {
+  display: block;
+}
+
+.playground .panel .error {
+  color: var(--fail);
+}
+
+/* Token table */
+.playground .token-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.playground .token-table th {
+  text-align: left;
+  padding: 4px 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-editor);
+}
+
+.playground .token-table td {
+  padding: 2px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.playground .token-table td:first-child {
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.playground .token-table td:nth-child(2) {
+  color: var(--accent);
+}
+
+/* Hidden utility */
+.hidden { display: none !important; }
+
+/* Step toggle button */
+.playground .step-toggle {
+  margin-left: auto;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  align-self: center;
+  margin-right: 8px;
+  font-family: inherit;
+}
+
+.playground .step-toggle:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.playground .step-toggle.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(74, 158, 255, 0.1);
+}
+
+/* Step controls bar */
+.playground .step-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.playground .step-controls button {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.playground .step-controls button:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.playground .step-counter {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  margin-left: auto;
+}
+
+/* Editor display (read-only pre for step mode) */
+.playground .editor-display {
+  flex: 1;
+  width: 100%;
+  margin: 0;
+  border: none;
+  outline: none;
+  padding: 16px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  background: var(--bg-editor);
+  color: var(--text);
+  tab-size: 2;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Consumed source text */
+.playground .consumed {
+  opacity: 0.5;
+}
+
+/* Token-building region */
+.playground .token-building {
+  text-decoration: underline dashed rgba(74, 158, 255, 0.5);
+  text-underline-offset: 3px;
+  color: var(--text);
+}
+
+/* Micro-step active highlight */
+.playground .micro-active {
+  background: rgba(74, 158, 255, 0.35);
+  outline: 1px solid rgba(74, 158, 255, 0.6);
+  border-radius: 2px;
+  color: #fff;
+}
+
+/* Current token row in token table */
+.playground .token-current {
+  background: rgba(74, 158, 255, 0.15);
+}
+
+/* Step info bar */
+.playground .step-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  min-height: 32px;
+}
+
+.playground .step-desc {
+  color: var(--text);
+  flex: 1;
+}
+
+.playground .step-pos {
+  color: var(--text-dim);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Step type badges */
+.playground .step-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.playground .step-badge-advance {
+  background: rgba(66, 133, 244, 0.2);
+  color: #6ab0ff;
+}
+
+.playground .step-badge-match {
+  background: rgba(52, 168, 83, 0.2);
+  color: #68d391;
+}
+
+.playground .step-badge-matchFail {
+  background: rgba(244, 67, 54, 0.2);
+  color: #fc8181;
+}
+
+.playground .step-badge-emit {
+  background: rgba(251, 188, 4, 0.2);
+  color: #fbd38d;
+}
+
+.playground .step-badge-skip {
+  background: rgba(128, 128, 160, 0.15);
+  color: #8888aa;
+}
+
+.playground .step-badge-scanStart {
+  background: rgba(74, 158, 255, 0.2);
+  color: #a78bfa;
+}
+
+.playground .step-badge-eof {
+  background: rgba(128, 128, 160, 0.15);
+  color: #8888aa;
+}
+
+/* Auto-play button */
+.playground .step-auto-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  line-height: 1;
+}
+
+.playground .step-auto-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.playground .step-auto-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(74, 158, 255, 0.1);
+}
+
+/* Step mode selector */
+.playground .step-mode-select {
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: auto;
+  margin-right: 4px;
+  align-self: center;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%238a8a9a' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  font-family: inherit;
+}
+
+.playground .step-mode-select:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.playground .step-mode-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.playground .step-mode-select option {
+  background: var(--bg-secondary);
+  color: var(--text);
+}
+
+/* Parser step badges */
+.playground .step-badge-enterRule {
+  background: rgba(56, 178, 172, 0.2);
+  color: #4fd1c5;
+}
+
+.playground .step-badge-exitRule {
+  background: rgba(56, 178, 172, 0.1);
+  color: #81e6d9;
+  opacity: 0.7;
+}
+
+.playground .step-badge-consumeToken {
+  background: rgba(66, 133, 244, 0.2);
+  color: #6ab0ff;
+}
+
+.playground .step-badge-tryMatch {
+  background: rgba(236, 201, 75, 0.2);
+  color: #ecc94b;
+}
+
+.playground .step-badge-produceNode {
+  background: rgba(72, 187, 120, 0.2);
+  color: #68d391;
+}
+
+.playground .step-badge-error {
+  background: rgba(245, 101, 101, 0.2);
+  color: #fc8181;
+}
+
+.playground .step-badge-synchronize {
+  background: rgba(128, 128, 160, 0.15);
+  color: #8888aa;
+}
+
+/* Parser call stack breadcrumb */
+.playground .parse-call-stack {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  font-size: 11px;
+  margin-top: 4px;
+  width: 100%;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.playground .stack-item {
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.playground .stack-current {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.playground .stack-sep {
+  color: var(--text-dim);
+  opacity: 0.5;
+  margin: 0 1px;
+}
+
+/* Parser step rule label */
+.playground .step-rule {
+  color: var(--accent);
+  font-weight: 500;
+  font-size: 12px;
+}
+
+/* Consumed token rows in parser mode */
+.playground .token-consumed {
+  opacity: 0.4;
+}
+
+/* Current parser position token row */
+.playground .token-current-parse {
+  background: rgba(74, 158, 255, 0.15);
+}
+
+/* Parser step mode: split tokens + AST panels */
+.playground .output-pane.parser-split #panel-tokens,
+.playground .output-pane.parser-split #panel-ast {
+  display: block !important;
+  flex: 1;
+  min-height: 0;
+}
+
+.playground .output-pane.parser-split #panel-bytecode,
+.playground .output-pane.parser-split #panel-output {
+  display: none !important;
+}
+
+.playground .split-label {
+  display: none;
+}
+
+.playground .output-pane.parser-split .split-label[data-for="tokens"],
+.playground .output-pane.parser-split .split-label[data-for="ast"] {
+  display: block;
+  padding: 4px 16px 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.playground .output-pane.parser-split .split-label[data-for="ast"] {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+/* Incremental AST tree */
+.playground .ast-tree {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.playground .ast-node {
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.playground .ast-indent {
+  color: var(--text-dim);
+  opacity: 0.3;
+}
+
+.playground .ast-program {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.playground .ast-node-new {
+  background: rgba(72, 187, 120, 0.2);
+  color: #68d391;
+  font-weight: 600;
+}
+
+.playground .ast-empty {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* Playground responsive */
+@media (max-width: 768px) {
+  .playground {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .playground .editor-pane,
+  .playground .output-pane {
+    width: 100%;
+    border-right: none;
+  }
+
+  .playground .editor-pane {
+    height: 40vh;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .playground .output-pane {
+    flex: 1;
+    min-height: 50vh;
   }
 }

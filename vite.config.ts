@@ -14,6 +14,7 @@ export default defineConfig({
         index: resolve(__dirname, 'index.html'),
         test262: resolve(__dirname, 'test262/index.html'),
         custom: resolve(__dirname, 'custom/index.html'),
+        playground: resolve(__dirname, 'playground/index.html'),
       },
     },
   },

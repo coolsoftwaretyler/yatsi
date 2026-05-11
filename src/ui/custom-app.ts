@@ -49,6 +49,7 @@ export class CustomApp {
     const nav = el('nav', { className: 'app-nav' },
       el('a', { href: '../' }, 'Home'),
       el('a', { href: '../test262/' }, 'Test262 Runner'),
+      el('a', { href: '../playground/' }, 'Playground'),
     );
 
     const header = el('header', { className: 'app-header' },

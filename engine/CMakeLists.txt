@@ -20,6 +20,7 @@ set(YATSI_SOURCES
     src/runtime/gc.cpp
     src/runtime/js_string.cpp
     src/vm/vm.cpp
+    src/wasm_api.cpp
 )
 
 add_executable(yatsi ${YATSI_SOURCES})

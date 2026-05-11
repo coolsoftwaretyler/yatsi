@@ -21,6 +21,10 @@ function init(): void {
       el('h2', {}, 'Custom Tests'),
       el('p', {}, 'Run hand-written tests for language features under active development.'),
     ),
+    el('a', { className: 'home-card', href: './playground/' },
+      el('h2', {}, 'Playground'),
+      el('p', {}, 'Interactive editor with step-through debugging for the lexer and parser.'),
+    ),
   );
 
   root.appendChild(header);
