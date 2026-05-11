@@ -1,6 +1,6 @@
 node_modules/
 dist/
 engine/build/
-src/engine/wasm/
+src/engine/wasm/*.wasm
 *.log
 .DS_Store
