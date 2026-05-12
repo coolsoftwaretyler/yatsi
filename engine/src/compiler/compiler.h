@@ -39,6 +39,13 @@ struct LoopContext {
   bool is_for_loop = false; // we have to indicate for loops for specific logic
 };
 
+// Local variable tracking for scope moanagement
+struct Local {
+  std::string name;
+  uint8_t reg;
+  int depth;
+};
+
 class Compiler {
 public:
   explicit Compiler(GarbageCollector& gc);
@@ -50,6 +57,12 @@ private:
   GarbageCollector& gc_;
   BytecodeFunction* current_function_ = nullptr;
   std::vector<LoopContext> loop_stack_;
+  std::vector<Local> locals_;
+  int scope_depth_ = 0; // A scope depth of 0 indicates the global scope
+  void begin_scope();
+  void end_scope();
+  // Returns register number or -1 if not found
+  int resolve_local(const std::string& name);
   std::vector<CompilerStep>* trace_ = nullptr;
   size_t trace_depth_ = 0;
   void trace_step(CompilerStep step);
