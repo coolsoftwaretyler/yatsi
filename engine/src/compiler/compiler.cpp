@@ -100,6 +100,7 @@ Compiler::Compiler(GarbageCollector &gc) : gc_(gc) {}
 void Compiler::begin_scope() { scope_depth_++; }
 
 void Compiler::end_scope() {
+  scope_depth_--;
   // Remove any locals that belong to the scope we're exiting
   while (!locals_.empty() && locals_.back().depth > scope_depth_) {
     locals_.pop_back();
@@ -302,7 +303,7 @@ void Compiler::compile_stmt(const Stmt &stmt) {
         } else if constexpr (std::is_same_v<T, VarDeclaration>) {
           TraceNode tn(trace_, &trace_depth_, "VarDeclaration", node.name,
                        stmt.location.line, stmt.location.column);
-          if (node.initializer) {
+          if (scope_depth_ > 0) {
             uint8_t reg;
             if (node.initializer) {
               reg = compile_expr(*node.initializer);
