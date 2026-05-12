@@ -107,12 +107,16 @@ uint8_t Compiler::allocate_register() {
 // --- Constant pool ---
 
 uint16_t Compiler::add_constant(Value val) {
-  // Deduplicate number constants
+  // Deduplicate constants
   auto &constants = current_function_->constants;
   for (size_t i = 0; i < constants.size(); ++i) {
     const auto &existing = constants[i];
     if (val.is_number() && existing.is_number() &&
         val.as_number() == existing.as_number()) {
+      return static_cast<uint16_t>(i);
+    }
+    if (val.is_string() && existing.is_string() &&
+        val.as_string()->data() == existing.as_string()->data()) {
       return static_cast<uint16_t>(i);
     }
   }
