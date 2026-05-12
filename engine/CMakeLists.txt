@@ -6,8 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_options(-Wall -Wextra -Wpedantic)
 
-set(YATSI_SOURCES
-    src/yatsi.cpp
+set(YATSI_CORE_SOURCES
     src/evaluate.cpp
     src/common/value.cpp
     src/lexer/token.cpp
@@ -21,13 +20,15 @@ set(YATSI_SOURCES
     src/runtime/js_string.cpp
     src/runtime/js_function.cpp
     src/vm/vm.cpp
-    src/wasm_api.cpp
 )
 
-add_executable(yatsi ${YATSI_SOURCES})
-target_include_directories(yatsi PRIVATE src)
-
 if(EMSCRIPTEN)
+    add_executable(yatsi
+        ${YATSI_CORE_SOURCES}
+        src/yatsi.cpp
+        src/wasm_api.cpp
+    )
+    target_include_directories(yatsi PRIVATE src)
     set_target_properties(yatsi PROPERTIES
         SUFFIX ".js"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
@@ -45,4 +46,10 @@ if(EMSCRIPTEN)
         -sSTACK_SIZE=1048576
         -sDISABLE_EXCEPTION_CATCHING=0
     )
+else()
+    add_executable(yatsi_cli
+        ${YATSI_CORE_SOURCES}
+        src/main.cpp
+    )
+    target_include_directories(yatsi_cli PRIVATE src)
 endif()

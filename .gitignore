@@ -2,5 +2,6 @@ node_modules/
 dist/
 engine/build/
 engine/build-native/
+engine/build-cli/
 *.log
 .DS_Store
