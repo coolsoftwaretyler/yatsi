@@ -2,6 +2,7 @@
 
 #include "runtime/heap_object.h"
 #include "runtime/js_string.h"
+#include "runtime/js_function.h"
 
 #include <limits>
 
@@ -69,6 +70,16 @@ bool Value::is_string() const {
 JsString *Value::as_string() const {
   assert(is_string() && "Value is not a string");
   return static_cast<JsString *>(object_);
+}
+
+bool Value::is_function() const {
+  return is_object() && object_ &&
+         object_->heap_kind() == HeapObjectKind::Function;
+}
+
+JsFunction *Value::as_function() const {
+  assert(is_function() && "Value is not a function");
+  return static_cast<JsFunction *>(object_);
 }
 
 // --- JS truthiness ---
