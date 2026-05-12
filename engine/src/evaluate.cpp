@@ -5,8 +5,10 @@
 #include "runtime/gc.h"
 #include "vm/vm.h"
 #include <sstream>
+#include <stdexcept>
 
 EvalResult evaluate(const std::string& source) {
+  try {
     // Break down a source string into a vector of tokens
     yatsi::Lexer lexer(std::string(source), "<eval>");
     auto tokens = lexer.tokenize();
@@ -37,7 +39,7 @@ EvalResult evaluate(const std::string& source) {
     auto func = compiler.compile(program);
 
     // A BytecodeFunction can be executed by our virtual machine.
-    // 
+    //
     std::ostringstream captured;
     yatsi::VM vm(gc, captured);
     // Once the VM has finished running the top level function,
@@ -49,4 +51,9 @@ EvalResult evaluate(const std::string& source) {
         return EvalResult{false, "RuntimeError", "Runtime error", 2, captured.str()};
     }
     return EvalResult{true, "", "", 0, captured.str()};
+  } catch (const std::exception& e) {
+    return EvalResult{false, "InternalError", e.what(), 2, ""};
+  } catch (...) {
+    return EvalResult{false, "InternalError", "unknown exception", 2, ""};
+  }
 }

@@ -1,5 +1,6 @@
 #include <emscripten/bind.h>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 #include "common/common.h"
@@ -41,6 +42,7 @@ std::string json_escape(const std::string& s) {
 // --- API functions ---
 
 std::string tokenize_traced(const std::string& source) {
+  try {
   yatsi::Lexer lexer(std::string(source), "<playground>");
   std::vector<yatsi::LexerStep> trace;
   lexer.enable_tracing(trace);
@@ -139,9 +141,15 @@ std::string tokenize_traced(const std::string& source) {
   }
   json += "]}";
   return json;
+  } catch (const std::exception& e) {
+    return "{\"steps\":[],\"tokens\":[],\"error\":\"" + json_escape(e.what()) + "\"}";
+  } catch (...) {
+    return "{\"steps\":[],\"tokens\":[],\"error\":\"unknown exception\"}";
+  }
 }
 
 std::string parse_traced(const std::string& source) {
+  try {
   // Tokenize with spans
   yatsi::Lexer lexer(std::string(source), "<playground>");
   auto tokens = lexer.tokenize();
@@ -237,9 +245,15 @@ std::string parse_traced(const std::string& source) {
   }
   json += "]}";
   return json;
+  } catch (const std::exception& e) {
+    return "{\"steps\":[],\"tokens\":[],\"ast\":\"\",\"errors\":[\"" + json_escape(e.what()) + "\"]}";
+  } catch (...) {
+    return "{\"steps\":[],\"tokens\":[],\"ast\":\"\",\"errors\":[\"unknown exception\"]}";
+  }
 }
 
 std::string compile_traced(const std::string& source) {
+  try {
   // Tokenize
   yatsi::Lexer lexer(std::string(source), "<playground>");
   auto tokens = lexer.tokenize();
@@ -355,9 +369,15 @@ std::string compile_traced(const std::string& source) {
 
   json += "\",\"errors\":[]}";
   return json;
+  } catch (const std::exception& e) {
+    return "{\"errors\":[\"" + json_escape(e.what()) + "\"]}";
+  } catch (...) {
+    return "{\"errors\":[\"unknown exception\"]}";
+  }
 }
 
 std::string run_pipeline(const std::string& source) {
+  try {
   // Tokenize
   yatsi::Lexer lexer(std::string(source), "<playground>");
   auto tokens = lexer.tokenize();
@@ -421,6 +441,11 @@ std::string run_pipeline(const std::string& source) {
   }
   json += "}";
   return json;
+  } catch (const std::exception& e) {
+    return "{\"ok\":false,\"tokens\":[],\"errors\":[\"" + json_escape(e.what()) + "\"]}";
+  } catch (...) {
+    return "{\"ok\":false,\"tokens\":[],\"errors\":[\"unknown exception\"]}";
+  }
 }
 
 } // namespace

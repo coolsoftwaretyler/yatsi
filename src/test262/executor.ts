@@ -114,6 +114,11 @@ export class TestExecutor {
       worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
         this.handleMessage(slot, e.data);
       };
+
+      worker.onerror = (e: ErrorEvent) => {
+        e.preventDefault();
+        this.handleWorkerCrash(slot);
+      };
     }
 
     await Promise.all(readyPromises);
@@ -219,6 +224,11 @@ export class TestExecutor {
       this.handleMessage(slot, e.data);
     };
 
+    newWorker.onerror = (e: ErrorEvent) => {
+      e.preventDefault();
+      this.handleWorkerCrash(slot);
+    };
+
     slot.worker = newWorker;
 
     await readyPromise;
@@ -235,6 +245,58 @@ export class TestExecutor {
     this.completed++;
     this.onResult(result);
     this.onProgress(this.completed, this.total);
+
+    if (!this.cancelled) {
+      this.dispatch();
+    }
+  }
+
+  private async handleWorkerCrash(slot: WorkerSlot): Promise<void> {
+    const task = slot.pending;
+    if (task) {
+      clearTimeout(task.timeoutId);
+      slot.pending = null;
+      slot.busy = false;
+
+      const elapsed = performance.now() - task.startTime;
+      const result: TestResult = {
+        testPath: task.test.testPath,
+        scenario: task.test.scenario,
+        outcome: 'fail',
+        errorType: 'InternalError',
+        errorMessage: 'Worker crashed (WASM abort)',
+        duration: elapsed,
+      };
+
+      this.completed++;
+      this.onResult(result);
+      this.onProgress(this.completed, this.total);
+    }
+
+    // Terminate and replace the crashed worker
+    slot.worker.terminate();
+
+    const newWorker = new Worker(
+      new URL('../engine/engine.worker.ts', import.meta.url),
+      { type: 'module' },
+    );
+
+    const readyPromise = new Promise<void>(resolve => {
+      this.readyResolvers.set(newWorker, resolve);
+    });
+
+    newWorker.onmessage = (e: MessageEvent<WorkerResponse>) => {
+      this.handleMessage(slot, e.data);
+    };
+
+    newWorker.onerror = (e: ErrorEvent) => {
+      e.preventDefault();
+      this.handleWorkerCrash(slot);
+    };
+
+    slot.worker = newWorker;
+
+    await readyPromise;
 
     if (!this.cancelled) {
       this.dispatch();
