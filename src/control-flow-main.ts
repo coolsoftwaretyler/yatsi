@@ -210,6 +210,7 @@ interface ExampleState {
 
 let engine: YatsiEngine | null = null;
 const states: ExampleState[] = [];
+let initializing = true;
 
 // --- Helpers ---
 
@@ -898,10 +899,12 @@ function renderBytecode(state: ExampleState): void {
 
   state.bytecodeEl.innerHTML = html;
 
-  // Scroll to newest
-  const newLine = state.bytecodeEl.querySelector('.bytecode-line-new, .bytecode-line-patched');
-  if (newLine) {
-    newLine.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  // Scroll to newest (skip during initial auto-compile)
+  if (!initializing) {
+    const newLine = state.bytecodeEl.querySelector('.bytecode-line-new, .bytecode-line-patched');
+    if (newLine) {
+      newLine.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
   }
 }
 
@@ -1188,10 +1191,12 @@ function renderSourceHighlight(state: ExampleState): void {
   state.sourceOverlayEl.classList.remove('hidden');
   state.editorEl.classList.add('hidden');
 
-  // Scroll active line into view
-  const activeEl = state.sourceOverlayEl.querySelector('.cf-source-line-active');
-  if (activeEl) {
-    activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  // Scroll active line into view (skip during initial auto-compile)
+  if (!initializing) {
+    const activeEl = state.sourceOverlayEl.querySelector('.cf-source-line-active');
+    if (activeEl) {
+      activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
   }
 }
 
@@ -1412,6 +1417,7 @@ async function init(): Promise<void> {
   for (const state of states) {
     compileExample(state);
   }
+  initializing = false;
 }
 
 init();
