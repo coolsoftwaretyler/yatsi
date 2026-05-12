@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "==> Pre-push: rebuilding engine..."
+
+if ! ./build-engine.sh; then
+  echo "ERROR: build-engine.sh failed. Push aborted."
+  exit 1
+fi
+
+# Check if the build produced changes to the wasm artifacts
+if ! git diff --quiet src/engine/wasm/; then
+  echo "==> WASM artifacts changed, amending last commit..."
+  git add src/engine/wasm/
+  git commit --amend --no-edit
+  echo "==> Last commit amended with rebuilt WASM artifacts."
+fi
+
+echo "==> Pre-push: engine is up to date."
