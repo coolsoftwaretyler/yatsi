@@ -42,5 +42,6 @@ if(EMSCRIPTEN)
         -sFILESYSTEM=0
         -sNO_EXIT_RUNTIME=1
         -sSTACK_SIZE=1048576
+        -sDISABLE_EXCEPTION_CATCHING=0
     )
 endif()
