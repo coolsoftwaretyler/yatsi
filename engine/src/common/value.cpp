@@ -1,8 +1,8 @@
 #include "common/value.h"
 
 #include "runtime/heap_object.h"
-#include "runtime/js_string.h"
 #include "runtime/js_function.h"
+#include "runtime/js_string.h"
 
 #include <limits>
 
@@ -201,7 +201,8 @@ std::string Value::type_of() const {
   case ValueKind::Object:
     if (is_string())
       return "string";
-    // TODO: function returns "function"
+    if (is_function())
+      return "function";
     return "object";
   }
   return "undefined";
@@ -228,6 +229,8 @@ std::string Value::to_debug_string() const {
   case ValueKind::Object:
     if (is_string())
       return "\"" + as_string()->to_utf8() + "\"";
+    if (is_function())
+      return "<function " + as_function()->prototype()->name + ">";
     return "<object>";
   }
   return "<unknown>";
@@ -253,6 +256,9 @@ std::string Value::to_print_string() const {
   case ValueKind::Object:
     if (is_string())
       return as_string()->to_utf8(); // no quotes, unlike to_debug_string
+    if (is_function())
+      return "function " + as_function()->prototype()->name +
+             "() { [native code] }";
     return "[object Object]";
   }
   return "undefined";
