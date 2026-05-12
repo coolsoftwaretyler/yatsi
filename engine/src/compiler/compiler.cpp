@@ -24,16 +24,21 @@ struct TraceNode {
   std::vector<CompilerStep>* trace_;
   size_t* depth_;
   std::string node_type_;
+  int line_;
+  int col_;
 
   TraceNode(std::vector<CompilerStep>* t, size_t* depth,
-            const std::string& node_type, const std::string& detail)
-      : trace_(t), depth_(depth), node_type_(node_type) {
+            const std::string& node_type, const std::string& detail,
+            int line = -1, int col = -1)
+      : trace_(t), depth_(depth), node_type_(node_type), line_(line), col_(col) {
     if (trace_) {
       CompilerStep step;
       step.type = CompilerStep::Type::EnterNode;
       step.depth = *depth_;
       step.node_type = node_type;
       step.description = detail;
+      step.source_line = line;
+      step.source_column = col;
       trace_->push_back(std::move(step));
       (*depth_)++;
     }
@@ -47,6 +52,8 @@ struct TraceNode {
       step.depth = *depth_;
       step.node_type = node_type_;
       step.description = "done";
+      step.source_line = line_;
+      step.source_column = col_;
       trace_->push_back(std::move(step));
     }
   }
@@ -253,12 +260,12 @@ void Compiler::compile_stmt(const Stmt &stmt) {
       [&](const auto &node) {
         using T = std::decay_t<decltype(node)>;
         if constexpr (std::is_same_v<T, ExpressionStmt>) {
-          TraceNode tn(trace_, &trace_depth_, "ExpressionStmt", "");
+          TraceNode tn(trace_, &trace_depth_, "ExpressionStmt", "", stmt.location.line, stmt.location.column);
           compile_expr(*node.expression);
           // Result register is discarded
 
         } else if constexpr (std::is_same_v<T, VarDeclaration>) {
-          TraceNode tn(trace_, &trace_depth_, "VarDeclaration", node.name);
+          TraceNode tn(trace_, &trace_depth_, "VarDeclaration", node.name, stmt.location.line, stmt.location.column);
           if (node.initializer) {
             uint8_t val_reg = compile_expr(*node.initializer);
             uint16_t name_idx = add_string_constant(node.name);
@@ -271,13 +278,13 @@ void Compiler::compile_stmt(const Stmt &stmt) {
           }
 
         } else if constexpr (std::is_same_v<T, BlockStmt>) {
-          TraceNode tn(trace_, &trace_depth_, "BlockStmt", "");
+          TraceNode tn(trace_, &trace_depth_, "BlockStmt", "", stmt.location.line, stmt.location.column);
           for (const auto &s : node.statements) {
             compile_stmt(*s);
           }
 
         } else if constexpr (std::is_same_v<T, IfStmt>) {
-          TraceNode tn(trace_, &trace_depth_, "IfStmt", "");
+          TraceNode tn(trace_, &trace_depth_, "IfStmt", "", stmt.location.line, stmt.location.column);
           uint8_t cond_reg = compile_expr(*node.condition);
           size_t jump_else = emit_jump(OpCode::JumpIfFalse, cond_reg);
           compile_stmt(*node.consequent);
@@ -290,7 +297,7 @@ void Compiler::compile_stmt(const Stmt &stmt) {
             patch_jump(jump_else);
           }
         } else if constexpr (std::is_same_v<T, WhileStmt>) {
-          TraceNode tn(trace_, &trace_depth_, "WhileStmt", "");
+          TraceNode tn(trace_, &trace_depth_, "WhileStmt", "", stmt.location.line, stmt.location.column);
           size_t loop_start = current_offset();
           loop_stack_.push_back(LoopContext{loop_start, {}, {}, false});
           if (trace_) {
@@ -324,7 +331,7 @@ void Compiler::compile_stmt(const Stmt &stmt) {
             trace_step(step);
           }
         } else if constexpr (std::is_same_v<T, ForStmt>) {
-          TraceNode tn(trace_, &trace_depth_, "ForStmt", "");
+          TraceNode tn(trace_, &trace_depth_, "ForStmt", "", stmt.location.line, stmt.location.column);
           // Compile initializer
           if (node.init)
             compile_stmt(*node.init);
@@ -382,14 +389,14 @@ void Compiler::compile_stmt(const Stmt &stmt) {
           }
 
         } else if constexpr (std::is_same_v<T, BreakStmt>) {
-          TraceNode tn(trace_, &trace_depth_, "BreakStmt", "");
+          TraceNode tn(trace_, &trace_depth_, "BreakStmt", "", stmt.location.line, stmt.location.column);
           if (!loop_stack_.empty()) {
             size_t jump_idx = emit_jump(OpCode::Jump);
             loop_stack_.back().break_jumps.push_back(jump_idx);
           }
 
         } else if constexpr (std::is_same_v<T, ContinueStmt>) {
-          TraceNode tn(trace_, &trace_depth_, "ContinueStmt", "");
+          TraceNode tn(trace_, &trace_depth_, "ContinueStmt", "", stmt.location.line, stmt.location.column);
           if (!loop_stack_.empty()) {
             auto &ctx = loop_stack_.back();
             if (ctx.is_for_loop) {
@@ -405,10 +412,10 @@ void Compiler::compile_stmt(const Stmt &stmt) {
             }
           }
         } else if constexpr (std::is_same_v<T, FunctionDecl>) {
-          TraceNode tn(trace_, &trace_depth_, "FunctionDecl", node.name);
+          TraceNode tn(trace_, &trace_depth_, "FunctionDecl", node.name, stmt.location.line, stmt.location.column);
           std::cerr << "warning: FunctionDecl not yet compiled\n";
         } else if constexpr (std::is_same_v<T, ReturnStmt>) {
-          TraceNode tn(trace_, &trace_depth_, "ReturnStmt", "");
+          TraceNode tn(trace_, &trace_depth_, "ReturnStmt", "", stmt.location.line, stmt.location.column);
           std::cerr << "warning: ReturnStmt not yet compiled\n";
         }
       },
@@ -424,41 +431,41 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
       [&](const auto &node) {
         using T = std::decay_t<decltype(node)>;
         if constexpr (std::is_same_v<T, NumberLiteral>) {
-          TraceNode tn(trace_, &trace_depth_, "NumberLiteral", expr_node_desc(expr));
+          TraceNode tn(trace_, &trace_depth_, "NumberLiteral", expr_node_desc(expr), expr.location.line, expr.location.column);
           dest = allocate_register();
           uint16_t idx = add_constant(Value::number(node.value));
           emit_abx(OpCode::LoadConst, dest, idx);
 
         } else if constexpr (std::is_same_v<T, StringLiteral>) {
-          TraceNode tn(trace_, &trace_depth_, "StringLiteral", "\"" + node.value + "\"");
+          TraceNode tn(trace_, &trace_depth_, "StringLiteral", "\"" + node.value + "\"", expr.location.line, expr.location.column);
           dest = allocate_register();
           uint16_t idx = add_string_constant(node.value);
           emit_abx(OpCode::LoadConst, dest, idx);
 
         } else if constexpr (std::is_same_v<T, BooleanLiteral>) {
-          TraceNode tn(trace_, &trace_depth_, "BooleanLiteral", node.value ? "true" : "false");
+          TraceNode tn(trace_, &trace_depth_, "BooleanLiteral", node.value ? "true" : "false", expr.location.line, expr.location.column);
           dest = allocate_register();
           emit_abc(node.value ? OpCode::LoadTrue : OpCode::LoadFalse, dest, 0,
                    0);
 
         } else if constexpr (std::is_same_v<T, NullLiteral>) {
-          TraceNode tn(trace_, &trace_depth_, "NullLiteral", "");
+          TraceNode tn(trace_, &trace_depth_, "NullLiteral", "", expr.location.line, expr.location.column);
           dest = allocate_register();
           emit_abc(OpCode::LoadNull, dest, 0, 0);
 
         } else if constexpr (std::is_same_v<T, UndefinedLiteral>) {
-          TraceNode tn(trace_, &trace_depth_, "UndefinedLiteral", "");
+          TraceNode tn(trace_, &trace_depth_, "UndefinedLiteral", "", expr.location.line, expr.location.column);
           dest = allocate_register();
           emit_abc(OpCode::LoadUndef, dest, 0, 0);
 
         } else if constexpr (std::is_same_v<T, Identifier>) {
-          TraceNode tn(trace_, &trace_depth_, "Identifier", node.name);
+          TraceNode tn(trace_, &trace_depth_, "Identifier", node.name, expr.location.line, expr.location.column);
           dest = allocate_register();
           uint16_t name_idx = add_string_constant(node.name);
           emit_abx(OpCode::GetGlobal, dest, name_idx);
 
         } else if constexpr (std::is_same_v<T, BinaryExpr>) {
-          TraceNode tn(trace_, &trace_depth_, "BinaryExpr", std::string(token_kind_to_string(node.op)));
+          TraceNode tn(trace_, &trace_depth_, "BinaryExpr", std::string(token_kind_to_string(node.op)), expr.location.line, expr.location.column);
           if (node.op == TokenKind::AmpersandAmpersand) {
             // a && b: short-circuit — if a is falsy, result is a; otherwise b
             uint8_t left = compile_expr(*node.left);
@@ -485,7 +492,7 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           }
 
         } else if constexpr (std::is_same_v<T, UnaryExpr>) {
-          TraceNode tn(trace_, &trace_depth_, "UnaryExpr", std::string(token_kind_to_string(node.op)));
+          TraceNode tn(trace_, &trace_depth_, "UnaryExpr", std::string(token_kind_to_string(node.op)), expr.location.line, expr.location.column);
           uint8_t operand = compile_expr(*node.operand);
           dest = allocate_register();
           if (node.op == TokenKind::Minus) {
@@ -501,7 +508,7 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           }
 
         } else if constexpr (std::is_same_v<T, AssignmentExpr>) {
-          TraceNode tn(trace_, &trace_depth_, "AssignmentExpr", std::string(token_kind_to_string(node.op)));
+          TraceNode tn(trace_, &trace_depth_, "AssignmentExpr", std::string(token_kind_to_string(node.op)), expr.location.line, expr.location.column);
           // Only simple assignment to identifiers for now
           if (auto *ident = std::get_if<Identifier>(&*node.target)) {
             uint8_t val_reg = compile_expr(*node.value);
@@ -515,7 +522,7 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           }
 
         } else if constexpr (std::is_same_v<T, CallExpr>) {
-          TraceNode tn(trace_, &trace_depth_, "CallExpr", "");
+          TraceNode tn(trace_, &trace_depth_, "CallExpr", "", expr.location.line, expr.location.column);
           // Check for console.log(...) pattern
           bool is_console_log = false;
           if (auto *member = std::get_if<MemberExpr>(&*node.callee)) {
@@ -552,32 +559,32 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           }
 
         } else if constexpr (std::is_same_v<T, MemberExpr>) {
-          TraceNode tn(trace_, &trace_depth_, "MemberExpr", node.is_computed ? "[]" : "." + node.property);
+          TraceNode tn(trace_, &trace_depth_, "MemberExpr", node.is_computed ? "[]" : "." + node.property, expr.location.line, expr.location.column);
           dest = allocate_register();
           std::cerr << "warning: MemberExpr not yet compiled\n";
 
         } else if constexpr (std::is_same_v<T, ArrayLiteral>) {
-          TraceNode tn(trace_, &trace_depth_, "ArrayLiteral", "");
+          TraceNode tn(trace_, &trace_depth_, "ArrayLiteral", "", expr.location.line, expr.location.column);
           dest = allocate_register();
           std::cerr << "warning: ArrayLiteral not yet compiled\n";
 
         } else if constexpr (std::is_same_v<T, ObjectLiteral>) {
-          TraceNode tn(trace_, &trace_depth_, "ObjectLiteral", "");
+          TraceNode tn(trace_, &trace_depth_, "ObjectLiteral", "", expr.location.line, expr.location.column);
           dest = allocate_register();
           std::cerr << "warning: ObjectLiteral not yet compiled\n";
 
         } else if constexpr (std::is_same_v<T, ArrowFunction>) {
-          TraceNode tn(trace_, &trace_depth_, "ArrowFunction", "");
+          TraceNode tn(trace_, &trace_depth_, "ArrowFunction", "", expr.location.line, expr.location.column);
           dest = allocate_register();
           std::cerr << "warning: ArrowFunction not yet compiled\n";
 
         } else if constexpr (std::is_same_v<T, ConditionalExpr>) {
-          TraceNode tn(trace_, &trace_depth_, "ConditionalExpr", "");
+          TraceNode tn(trace_, &trace_depth_, "ConditionalExpr", "", expr.location.line, expr.location.column);
           dest = allocate_register();
           std::cerr << "warning: ConditionalExpr not yet compiled\n";
 
         } else if constexpr (std::is_same_v<T, TemplateLiteral>) {
-          TraceNode tn(trace_, &trace_depth_, "TemplateLiteral", "");
+          TraceNode tn(trace_, &trace_depth_, "TemplateLiteral", "", expr.location.line, expr.location.column);
           dest = allocate_register();
           std::cerr << "warning: TemplateLiteral not yet compiled\n";
         }

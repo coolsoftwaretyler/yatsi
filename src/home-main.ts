@@ -25,6 +25,10 @@ function init(): void {
       el('h2', {}, 'Playground'),
       el('p', {}, 'Interactive editor with step-through debugging for the lexer and parser.'),
     ),
+    el('a', { className: 'home-card', href: './control-flow-compilation/' },
+      el('h2', {}, 'Control Flow'),
+      el('p', {}, 'Visualize how if/else, while, and for loops compile to bytecode with jump patching.'),
+    ),
   );
 
   root.appendChild(header);

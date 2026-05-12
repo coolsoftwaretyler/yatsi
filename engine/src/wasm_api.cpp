@@ -328,6 +328,14 @@ std::string compile_traced(const std::string& source) {
       json += ",\"patchTarget\":";
       json += std::to_string(step.patch_target);
     }
+    if (step.source_line >= 0) {
+      json += ",\"line\":";
+      json += std::to_string(step.source_line);
+    }
+    if (step.source_column >= 0) {
+      json += ",\"col\":";
+      json += std::to_string(step.source_column);
+    }
     json += "}";
   }
 
