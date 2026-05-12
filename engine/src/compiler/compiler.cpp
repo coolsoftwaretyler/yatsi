@@ -468,7 +468,47 @@ void Compiler::compile_stmt(const Stmt &stmt) {
         } else if constexpr (std::is_same_v<T, FunctionDecl>) {
           TraceNode tn(trace_, &trace_depth_, "FunctionDecl", node.name,
                        stmt.location.line, stmt.location.column);
-          std::cerr << "warning: FunctionDecl not yet compiled\n";
+          // First, we save the state of the compiler (which function we were
+          // in, its locals, its scope depth)
+          BytecodeFunction *saved_function = current_function_;
+          std::vector<Local> saved_locals = std::move(locals_);
+          int saved_depth = scope_depth_;
+
+          // Then we create a new BytecodeFunction to represent this function as
+          // a child, and we wire it up with the node's names. We intitialize
+          // the current function, scope depth, and locals stack
+          BytecodeFunction child;
+          child.name = node.name;
+          current_function_ = &child;
+          scope_depth_ = 1;
+          locals_.clear();
+
+          // We compile the body of the function
+          if (auto *block = std::get_if<BlockStmt>(&*node.body)) {
+            for (const auto &s : block->statements) {
+              compile_stmt(*s);
+            }
+          }
+
+          // after compilation, return undefined. This is default behavior, and
+          // eventually we will support other return types.
+          emit_abc(OpCode::ReturnUndef, 0, 0, 0);
+
+          // Restore compiler state from before function compilation
+          current_function_ = saved_function;
+          locals_ = std::move(saved_locals);
+          scope_depth_ = saved_depth;
+
+          // Add child to parent's functions vector
+          uint16_t func_index =
+              static_cast<uint16_t>(current_function_->functions.size());
+          current_function_->functions.push_back(std::move(child));
+
+          // In parent: emit Closure + SetGlobal
+          uint8_t dest = allocate_register();
+          emit_abx(OpCode::Closure, dest, func_index);
+          uint16_t name_idx = add_string_constant(node.name);
+          emit_abx(OpCode::SetGlobal, dest, name_idx);
         } else if constexpr (std::is_same_v<T, ReturnStmt>) {
           TraceNode tn(trace_, &trace_depth_, "ReturnStmt", "",
                        stmt.location.line, stmt.location.column);
@@ -641,7 +681,36 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
             emit_abc(OpCode::LoadUndef, dest, 0, 0);
           } else {
             dest = allocate_register();
-            std::cerr << "warning: CallExpr not yet compiled\n";
+            // General function call
+            // Compile callee into a register
+            uint8_t callee_reg = compile_expr(*node.callee);
+
+            // Compile arguments into registers immediately after callee
+            // We need them consecutive: R[callee], R[callee+1], ...,
+            // R[callee+N] But compile_expr allocates monotonically, so we
+            // compile args then move everything into a consecutive block.
+            // TODO: this is a good spot for a visualization, IMO.
+            std::vector<uint8_t> arg_regs;
+            for (const auto &arg : node.arguments) {
+              arg_regs.push_back(compile_expr(*arg));
+            }
+
+            // Allocate a consecutive block: [callee_slot, arg1, arg2, ...]
+            uint8_t callee_slot = allocate_register();
+            if (callee_reg != callee_slot) {
+              emit_abc(OpCode::Move, callee_slot, callee_reg, 0);
+            }
+            for (size_t i = 0; i < arg_regs.size(); ++i) {
+              uint8_t slot = allocate_register();
+              if (arg_regs[i] != slot) {
+                emit_abc(OpCode::Move, slot, arg_regs[i], 0);
+              }
+            }
+
+            uint8_t arg_count = static_cast<uint8_t>(arg_regs.size());
+            emit_abc(OpCode::Call, callee_slot, arg_count, 0);
+            // Return value is placed in callee_slot by the VM
+            dest = callee_slot;
           }
 
         } else if constexpr (std::is_same_v<T, MemberExpr>) {
