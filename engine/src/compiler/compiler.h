@@ -28,6 +28,8 @@ struct CompilerStep {
   int register_id = -1;
   int constant_index = -1;
   int patch_target = -1;
+  int source_line = -1;
+  int source_column = -1;
 };
 
 struct LoopContext {
