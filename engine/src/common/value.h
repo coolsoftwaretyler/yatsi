@@ -41,6 +41,10 @@ public:
   bool is_string() const;
   class JsString* as_string() const;
 
+  // Function convenience 
+  bool is_function() const;
+  class JsFunction* as_function() const;
+
   ValueKind kind() const { return kind_; }
 
   // JS semantics

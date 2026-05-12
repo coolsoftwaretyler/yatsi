@@ -19,6 +19,7 @@ set(YATSI_SOURCES
     src/compiler/disassembler.cpp
     src/runtime/gc.cpp
     src/runtime/js_string.cpp
+    src/runtime/js_function.cpp
     src/vm/vm.cpp
     src/wasm_api.cpp
 )
