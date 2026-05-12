@@ -1071,6 +1071,172 @@ body {
   font-style: italic;
 }
 
+/* Compiler step mode: split AST + Bytecode panels */
+.playground .output-pane.compiler-split #panel-ast,
+.playground .output-pane.compiler-split #panel-bytecode {
+  display: block !important;
+  flex: 1;
+  min-height: 0;
+}
+
+.playground .output-pane.compiler-split #panel-tokens,
+.playground .output-pane.compiler-split #panel-output {
+  display: none !important;
+}
+
+.playground .output-pane.compiler-split .split-label[data-for="ast"],
+.playground .output-pane.compiler-split .split-label[data-for="bytecode"] {
+  display: block;
+  padding: 4px 16px 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.playground .output-pane.compiler-split .split-label[data-for="bytecode"] {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+/* Compiler step badges */
+.playground .step-badge-enterNode {
+  background: rgba(56, 178, 172, 0.2);
+  color: #4fd1c5;
+}
+
+.playground .step-badge-exitNode {
+  background: rgba(56, 178, 172, 0.1);
+  color: #81e6d9;
+  opacity: 0.7;
+}
+
+.playground .step-badge-allocRegister {
+  background: rgba(159, 122, 234, 0.2);
+  color: #b794f4;
+}
+
+.playground .step-badge-emitInstruction {
+  background: rgba(66, 133, 244, 0.2);
+  color: #6ab0ff;
+}
+
+.playground .step-badge-addConstant {
+  background: rgba(251, 188, 4, 0.2);
+  color: #fbd38d;
+}
+
+.playground .step-badge-patchJump {
+  background: rgba(245, 101, 101, 0.2);
+  color: #fc8181;
+}
+
+.playground .step-badge-pushLoop {
+  background: rgba(72, 187, 120, 0.2);
+  color: #68d391;
+}
+
+.playground .step-badge-popLoop {
+  background: rgba(72, 187, 120, 0.1);
+  color: #9ae6b4;
+  opacity: 0.7;
+}
+
+/* AST node active highlight (compiler mode) */
+.playground .ast-node-active {
+  background: rgba(74, 158, 255, 0.2);
+  color: #6ab0ff;
+  font-weight: 600;
+}
+
+/* Bytecode listing */
+.playground .bytecode-listing {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.playground .bytecode-line {
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.playground .bytecode-line-new {
+  background: rgba(66, 133, 244, 0.2);
+  color: #6ab0ff;
+  font-weight: 600;
+}
+
+.playground .bytecode-line-patched {
+  background: rgba(245, 101, 101, 0.15);
+  color: #fc8181;
+  font-weight: 600;
+}
+
+.playground .bytecode-addr {
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+.playground .bytecode-op {
+  color: var(--accent);
+  display: inline-block;
+  min-width: 14ch;
+}
+
+.playground .bytecode-operands {
+  color: var(--text);
+}
+
+.playground .bytecode-comment {
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+
+/* Bytecode sections (constants, registers) */
+.playground .bytecode-section {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.playground .bytecode-section-header {
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.playground .constant-entry {
+  padding: 1px 4px;
+  font-size: 12px;
+  border-radius: 3px;
+}
+
+.playground .constant-new {
+  background: rgba(251, 188, 4, 0.15);
+  color: #fbd38d;
+  font-weight: 600;
+}
+
+.playground .register-entry {
+  padding: 1px 4px;
+  font-size: 12px;
+  border-radius: 3px;
+}
+
+.playground .register-new {
+  background: rgba(159, 122, 234, 0.15);
+  color: #b794f4;
+  font-weight: 600;
+}
+
 /* Playground responsive */
 @media (max-width: 768px) {
   .playground {

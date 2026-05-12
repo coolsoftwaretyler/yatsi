@@ -4,7 +4,31 @@
 #include "parser/ast.h"
 #include "runtime/gc.h"
 
+#include <string>
+#include <vector>
+
 namespace yatsi {
+
+struct CompilerStep {
+  enum class Type : uint8_t {
+    EnterNode,
+    ExitNode,
+    AllocRegister,
+    EmitInstruction,
+    AddConstant,
+    PatchJump,
+    PushLoop,
+    PopLoop,
+  };
+  Type type;
+  size_t depth = 0;
+  std::string node_type;
+  std::string description;
+  int instruction_index = -1;
+  int register_id = -1;
+  int constant_index = -1;
+  int patch_target = -1;
+};
 
 struct LoopContext {
   size_t continue_target; // where `continue` jumps to
@@ -18,11 +42,15 @@ public:
   explicit Compiler(GarbageCollector& gc);
 
   BytecodeFunction compile(const Program& program);
+  void enable_tracing(std::vector<CompilerStep>& trace);
 
 private:
   GarbageCollector& gc_;
   BytecodeFunction* current_function_ = nullptr;
   std::vector<LoopContext> loop_stack_;
+  std::vector<CompilerStep>* trace_ = nullptr;
+  size_t trace_depth_ = 0;
+  void trace_step(CompilerStep step);
 
   // Register allocation (monotonic counter)
   uint8_t allocate_register();

@@ -54,6 +54,36 @@ interface ParserTraceResult {
   errors: string[];
 }
 
+interface CompilerStep {
+  type: string;
+  depth: number;
+  nodeType: string;
+  desc: string;
+  instrIndex?: number;
+  registerId?: number;
+  constantIndex?: number;
+  patchTarget?: number;
+}
+
+interface CompilerInstruction {
+  opcode: string;
+  a: number;
+  b: number;
+  c: number;
+  bx: number;
+  sbx: number;
+}
+
+interface CompilerTraceResult {
+  steps: CompilerStep[];
+  instructions: CompilerInstruction[];
+  constants: string[];
+  registerCount: number;
+  ast: string;
+  bytecode: string;
+  errors: string[];
+}
+
 // --- State ---
 
 let engine: YatsiEngine | null = null;
@@ -61,12 +91,13 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Step mode state
 let stepMode = false;
-let stepModeType: 'lexer' | 'parser' = 'lexer';
-let stepData: LexerTraceResult | ParserTraceResult | null = null;
+let stepModeType: 'lexer' | 'parser' | 'compiler' = 'lexer';
+let stepData: LexerTraceResult | ParserTraceResult | CompilerTraceResult | null = null;
 let stepIndex = 0;
 let stepSource = '';
 let autoPlayTimer: ReturnType<typeof setTimeout> | null = null;
 let parserCallStack: string[] = [];
+let compilerNodeStack: string[] = [];
 
 // --- DOM refs ---
 
@@ -87,6 +118,7 @@ let panels: Record<string, HTMLElement>;
 let tabs: HTMLButtonElement[];
 let splitLabelTokens: HTMLElement;
 let splitLabelAst: HTMLElement;
+let splitLabelBytecode: HTMLElement;
 
 // --- Helpers ---
 
@@ -227,7 +259,9 @@ function enterStepMode(): void {
 
   try {
     let json: string;
-    if (stepModeType === 'parser') {
+    if (stepModeType === 'compiler') {
+      json = engine.compileTraced(stepSource);
+    } else if (stepModeType === 'parser') {
       json = engine.parseTraced(stepSource);
     } else {
       json = engine.tokenizeTraced(stepSource);
@@ -241,9 +275,19 @@ function enterStepMode(): void {
 
   if (!stepData || !stepData.steps || stepData.steps.length === 0) return;
 
+  // Check for parse errors in compiler mode
+  if (stepModeType === 'compiler') {
+    const cdata = stepData as CompilerTraceResult;
+    if (cdata.errors && cdata.errors.length > 0) {
+      panels.output.innerHTML = renderErrors(cdata.errors);
+      return;
+    }
+  }
+
   stepMode = true;
   stepIndex = 0;
   parserCallStack = [];
+  compilerNodeStack = [];
 
   editor.classList.add('hidden');
   editorDisplay.classList.remove('hidden');
@@ -255,8 +299,13 @@ function enterStepMode(): void {
 
   if (stepModeType === 'parser') {
     outputPane.classList.add('parser-split');
+    outputPane.classList.remove('compiler-split');
+  } else if (stepModeType === 'compiler') {
+    outputPane.classList.add('compiler-split');
+    outputPane.classList.remove('parser-split');
   } else {
     outputPane.classList.remove('parser-split');
+    outputPane.classList.remove('compiler-split');
   }
 
   panels.ast.textContent = '';
@@ -281,6 +330,8 @@ function exitStepMode(): void {
   stepInfoEl.classList.add('hidden');
   stepToggleBtn.classList.remove('active');
   outputPane.classList.remove('parser-split');
+  outputPane.classList.remove('compiler-split');
+  compilerNodeStack = [];
 
   runPipeline();
 }
@@ -343,8 +394,27 @@ function autoPlayTick(): void {
   autoPlayTimer = setTimeout(autoPlayTick, delay);
 }
 
-function getAutoPlayDelay(step: LexerStep | ParserStep): number {
-  if (stepModeType === 'parser') {
+function getAutoPlayDelay(step: LexerStep | ParserStep | CompilerStep): number {
+  if (stepModeType === 'compiler') {
+    switch (step.type) {
+      case 'enterNode':
+      case 'exitNode':
+        return 150;
+      case 'allocRegister':
+        return 200;
+      case 'emitInstruction':
+        return 400;
+      case 'addConstant':
+        return 350;
+      case 'patchJump':
+        return 500;
+      case 'pushLoop':
+      case 'popLoop':
+        return 250;
+      default:
+        return 300;
+    }
+  } else if (stepModeType === 'parser') {
     switch (step.type) {
       case 'enterRule':
       case 'exitRule':
@@ -391,7 +461,9 @@ function stopAutoPlay(): void {
 
 function renderStepState(): void {
   if (!stepData) return;
-  if (stepModeType === 'parser') {
+  if (stepModeType === 'compiler') {
+    renderCompilerStepState();
+  } else if (stepModeType === 'parser') {
     renderParserStepState();
   } else {
     renderLexerStepState();
@@ -675,6 +747,381 @@ function renderParserSourceForStep(step: ParserStep): void {
   editorDisplay.innerHTML = html;
 }
 
+// --- Compiler step rendering ---
+
+function renderCompilerStepState(): void {
+  const data = stepData as CompilerTraceResult;
+  const steps = data.steps;
+  const step = steps[stepIndex];
+
+  stepCounterEl.textContent = (stepIndex + 1) + ' / ' + steps.length;
+  rebuildCompilerNodeStack();
+  renderCompilerStepInfo(step);
+  renderCompilerASTView();
+  renderIncrementalBytecode();
+
+  // Show source in the editor display (non-highlighted, just for context)
+  editorDisplay.textContent = stepSource;
+}
+
+function rebuildCompilerNodeStack(): void {
+  const data = stepData as CompilerTraceResult;
+  compilerNodeStack = [];
+  for (let i = 0; i <= stepIndex; i++) {
+    const s = data.steps[i];
+    if (s.type === 'enterNode') {
+      compilerNodeStack.push(s.nodeType + (s.desc ? '(' + s.desc + ')' : ''));
+    } else if (s.type === 'exitNode') {
+      compilerNodeStack.pop();
+    }
+  }
+}
+
+function renderCompilerStepInfo(step: CompilerStep): void {
+  let badgeClass = 'step-badge';
+  let label = step.type;
+  switch (step.type) {
+    case 'enterNode':        badgeClass += ' step-badge-enterNode'; label = 'enter'; break;
+    case 'exitNode':         badgeClass += ' step-badge-exitNode'; label = 'exit'; break;
+    case 'allocRegister':    badgeClass += ' step-badge-allocRegister'; label = 'alloc reg'; break;
+    case 'emitInstruction':  badgeClass += ' step-badge-emitInstruction'; label = 'emit'; break;
+    case 'addConstant':      badgeClass += ' step-badge-addConstant'; label = 'constant'; break;
+    case 'patchJump':        badgeClass += ' step-badge-patchJump'; label = 'patch'; break;
+    case 'pushLoop':         badgeClass += ' step-badge-pushLoop'; label = 'loop start'; break;
+    case 'popLoop':          badgeClass += ' step-badge-popLoop'; label = 'loop end'; break;
+  }
+
+  let stackHtml = '';
+  if (compilerNodeStack.length > 0) {
+    stackHtml = '<div class="parse-call-stack">';
+    for (let i = 0; i < compilerNodeStack.length; i++) {
+      if (i > 0) stackHtml += '<span class="stack-sep"> \u203A </span>';
+      const isLast = i === compilerNodeStack.length - 1;
+      stackHtml += '<span class="stack-item' + (isLast ? ' stack-current' : '') + '">' +
+        escapeHtml(compilerNodeStack[i]) + '</span>';
+    }
+    stackHtml += '</div>';
+  }
+
+  const nodeTypeHtml = step.nodeType
+    ? '<span class="step-rule">' + escapeHtml(step.nodeType) + '</span> '
+    : '';
+
+  stepInfoEl.innerHTML =
+    '<span class="' + badgeClass + '">' + escapeHtml(label) + '</span> ' +
+    nodeTypeHtml +
+    '<span class="step-desc">' + escapeHtml(step.desc) + '</span>' +
+    stackHtml;
+}
+
+function renderCompilerASTView(): void {
+  const data = stepData as CompilerTraceResult;
+  if (!data.ast) {
+    panels.ast.innerHTML = '<span class="ast-empty">No AST</span>';
+    return;
+  }
+
+  // Determine the currently-active node by replaying the enter/exit trace
+  // and tracking which occurrence of which nodeType we're currently inside.
+  // "Occurrence" means: how many times we've entered this exact nodeType
+  // across the entire trace up to this point.
+  let activeNodeType = '';
+  let activeOccurrence = -1;
+
+  // Count total occurrences of each nodeType across all enterNode steps
+  // up to stepIndex, and track which one is currently on the stack.
+  const enterStack: { nodeType: string; occurrence: number }[] = [];
+  const occurrenceCounts: Record<string, number> = {};
+  for (let i = 0; i <= stepIndex; i++) {
+    const s = data.steps[i];
+    if (s.type === 'enterNode') {
+      const key = s.nodeType;
+      occurrenceCounts[key] = (occurrenceCounts[key] || 0) + 1;
+      enterStack.push({ nodeType: key, occurrence: occurrenceCounts[key] });
+    } else if (s.type === 'exitNode') {
+      enterStack.pop();
+    }
+  }
+  if (enterStack.length > 0) {
+    const top = enterStack[enterStack.length - 1];
+    activeNodeType = top.nodeType;
+    activeOccurrence = top.occurrence;
+  }
+
+  // Render AST lines. For each line that starts with the activeNodeType,
+  // count occurrences and highlight only the matching one.
+  const lines = data.ast.split('\n');
+  const lineOccurrences: Record<string, number> = {};
+  let html = '<div class="ast-tree">';
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim() === '') continue;
+    const trimmed = line.trimStart();
+    const indent = line.substring(0, line.length - trimmed.length);
+
+    // Extract the node type from the line (e.g. "VarDeclaration" from "VarDeclaration(Const a)")
+    const match = trimmed.match(/^([A-Z][A-Za-z]*)/);
+    let isActive = false;
+    if (match) {
+      const lineNodeType = match[1];
+      lineOccurrences[lineNodeType] = (lineOccurrences[lineNodeType] || 0) + 1;
+      if (lineNodeType === activeNodeType && lineOccurrences[lineNodeType] === activeOccurrence) {
+        isActive = true;
+      }
+    }
+
+    const cls = isActive ? 'ast-node ast-node-active' : 'ast-node';
+    html += '<div class="' + cls + '">' +
+      '<span class="ast-indent">' + escapeHtml(indent) + '</span>' +
+      escapeHtml(trimmed) + '</div>';
+  }
+  html += '</div>';
+  panels.ast.innerHTML = html;
+
+  const activeNode = panels.ast.querySelector('.ast-node-active');
+  if (activeNode) {
+    activeNode.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+function formatOperands(instr: CompilerInstruction): string {
+  const op = instr.opcode;
+  // Match the disassembler format categories
+  switch (op) {
+    // ABC format
+    case 'Add': case 'Sub': case 'Mul': case 'Div': case 'Mod': case 'Pow':
+    case 'AddNum': case 'SubNum': case 'MulNum': case 'DivNum': case 'ModNum': case 'PowNum':
+    case 'BitAnd': case 'BitOr': case 'BitXor':
+    case 'ShiftLeft': case 'ShiftRight': case 'ShiftRightU':
+    case 'Equal': case 'NotEqual': case 'LessThan': case 'LessEqual':
+    case 'GreaterThan': case 'GreaterEqual': case 'StrictEqual': case 'StrictNotEqual':
+    case 'GetProp': case 'SetProp': case 'GetIndex': case 'SetIndex':
+    case 'Call':
+      return 'R' + instr.a + ', R' + instr.b + ', R' + instr.c;
+
+    // AB format
+    case 'Move': case 'Neg': case 'NegNum': case 'BitNot': case 'Not': case 'TypeOf':
+    case 'GetUpvalue': case 'SetUpvalue': case 'NewArray': case 'Print':
+      return 'R' + instr.a + ', R' + instr.b;
+
+    // ABx format
+    case 'LoadConst': case 'GetGlobal': case 'SetGlobal': case 'Closure':
+      return 'R' + instr.a + ', K' + instr.bx;
+
+    // AsBx format (conditional jumps)
+    case 'JumpIfTrue': case 'JumpIfFalse':
+      return 'R' + instr.a + ', ' + instr.sbx;
+
+    // Jump (sBx only)
+    case 'Jump':
+      return '' + instr.sbx;
+
+    // A only
+    case 'LoadNull': case 'LoadUndef': case 'LoadTrue': case 'LoadFalse':
+    case 'NewObject': case 'CloseUpvalue': case 'Return':
+      return 'R' + instr.a;
+
+    // No operands
+    case 'ReturnUndef':
+      return '';
+
+    default:
+      return 'R' + instr.a + ', R' + instr.b + ', R' + instr.c;
+  }
+}
+
+function simulateRegisters(
+  instructions: CompilerInstruction[],
+  instrCount: number,
+  constants: string[],
+): string[] {
+  const regs: string[] = [];
+  for (let i = 0; i < instrCount && i < instructions.length; i++) {
+    const instr = instructions[i];
+    const op = instr.opcode;
+    const a = instr.a;
+
+    // Ensure array is large enough
+    while (regs.length <= a) regs.push('');
+
+    switch (op) {
+      case 'LoadConst':
+        regs[a] = instr.bx < constants.length ? constants[instr.bx] : 'K' + instr.bx;
+        break;
+      case 'LoadNull':    regs[a] = 'null'; break;
+      case 'LoadUndef':   regs[a] = 'undefined'; break;
+      case 'LoadTrue':    regs[a] = 'true'; break;
+      case 'LoadFalse':   regs[a] = 'false'; break;
+      case 'Move':
+        regs[a] = instr.b < regs.length && regs[instr.b] ? regs[instr.b] : 'R' + instr.b;
+        break;
+      case 'GetGlobal':
+        regs[a] = instr.bx < constants.length ? 'global(' + constants[instr.bx] + ')' : 'global(K' + instr.bx + ')';
+        break;
+      case 'Neg': case 'NegNum':
+        regs[a] = '-R' + instr.b;
+        break;
+      case 'Not':
+        regs[a] = '!R' + instr.b;
+        break;
+      case 'BitNot':
+        regs[a] = '~R' + instr.b;
+        break;
+      case 'TypeOf':
+        regs[a] = 'typeof R' + instr.b;
+        break;
+      case 'Add': case 'AddNum': regs[a] = 'R' + instr.b + ' + R' + instr.c; break;
+      case 'Sub': case 'SubNum': regs[a] = 'R' + instr.b + ' - R' + instr.c; break;
+      case 'Mul': case 'MulNum': regs[a] = 'R' + instr.b + ' * R' + instr.c; break;
+      case 'Div': case 'DivNum': regs[a] = 'R' + instr.b + ' / R' + instr.c; break;
+      case 'Mod': case 'ModNum': regs[a] = 'R' + instr.b + ' % R' + instr.c; break;
+      case 'Pow': case 'PowNum': regs[a] = 'R' + instr.b + ' ** R' + instr.c; break;
+      case 'BitAnd':    regs[a] = 'R' + instr.b + ' & R' + instr.c; break;
+      case 'BitOr':     regs[a] = 'R' + instr.b + ' | R' + instr.c; break;
+      case 'BitXor':    regs[a] = 'R' + instr.b + ' ^ R' + instr.c; break;
+      case 'ShiftLeft': regs[a] = 'R' + instr.b + ' << R' + instr.c; break;
+      case 'ShiftRight':  regs[a] = 'R' + instr.b + ' >> R' + instr.c; break;
+      case 'ShiftRightU': regs[a] = 'R' + instr.b + ' >>> R' + instr.c; break;
+      case 'Equal':          regs[a] = 'R' + instr.b + ' == R' + instr.c; break;
+      case 'NotEqual':       regs[a] = 'R' + instr.b + ' != R' + instr.c; break;
+      case 'StrictEqual':    regs[a] = 'R' + instr.b + ' === R' + instr.c; break;
+      case 'StrictNotEqual': regs[a] = 'R' + instr.b + ' !== R' + instr.c; break;
+      case 'LessThan':      regs[a] = 'R' + instr.b + ' < R' + instr.c; break;
+      case 'LessEqual':     regs[a] = 'R' + instr.b + ' <= R' + instr.c; break;
+      case 'GreaterThan':   regs[a] = 'R' + instr.b + ' > R' + instr.c; break;
+      case 'GreaterEqual':  regs[a] = 'R' + instr.b + ' >= R' + instr.c; break;
+      case 'NewObject': regs[a] = '{}'; break;
+      case 'NewArray':  regs[a] = '[]'; break;
+      case 'Call':       regs[a] = 'call(R' + instr.b + ', ' + instr.c + ' args)'; break;
+      case 'GetProp':    regs[a] = 'R' + instr.b + '[R' + instr.c + ']'; break;
+      case 'GetIndex':   regs[a] = 'R' + instr.b + '[R' + instr.c + ']'; break;
+      case 'Closure':    regs[a] = 'closure(K' + instr.bx + ')'; break;
+      case 'GetUpvalue': regs[a] = 'upval(' + instr.b + ')'; break;
+      // These don't write to a destination register
+      case 'SetGlobal': case 'SetUpvalue': case 'SetProp': case 'SetIndex':
+      case 'Jump': case 'JumpIfTrue': case 'JumpIfFalse':
+      case 'Return': case 'ReturnUndef': case 'CloseUpvalue':
+      case 'Print':
+        break;
+      default:
+        regs[a] = op + '(...)';
+        break;
+    }
+  }
+  return regs;
+}
+
+function renderIncrementalBytecode(): void {
+  const data = stepData as CompilerTraceResult;
+  const step = data.steps[stepIndex];
+
+  // Count how many instructions have been emitted up to current step
+  let instrCount = 0;
+  let newestInstrIndex = -1;
+  let newestPatchIndex = -1;
+  let highestRegister = -1;
+  let newestRegister = -1;
+  const constantsSoFar: number[] = [];
+
+  for (let i = 0; i <= stepIndex; i++) {
+    const s = data.steps[i];
+    if (s.type === 'emitInstruction' && s.instrIndex !== undefined) {
+      instrCount = s.instrIndex + 1;
+      newestInstrIndex = s.instrIndex;
+    }
+    if (s.type === 'patchJump' && s.instrIndex !== undefined) {
+      newestPatchIndex = s.instrIndex;
+    }
+    if (s.type === 'allocRegister' && s.registerId !== undefined) {
+      highestRegister = Math.max(highestRegister, s.registerId);
+      newestRegister = s.registerId;
+    }
+    if (s.type === 'addConstant' && s.constantIndex !== undefined) {
+      if (!constantsSoFar.includes(s.constantIndex)) {
+        constantsSoFar.push(s.constantIndex);
+      }
+    }
+  }
+
+  // Simulate register contents from emitted instructions
+  const regValues = simulateRegisters(data.instructions, instrCount, data.constants);
+
+  // Build bytecode listing
+  let html = '<div class="bytecode-listing">';
+
+  for (let i = 0; i < instrCount && i < data.instructions.length; i++) {
+    const instr = data.instructions[i];
+    const addr = String(i).padStart(4, '0');
+    const opName = instr.opcode;
+    const operands = formatOperands(instr);
+
+    let cls = 'bytecode-line';
+    if (i === newestInstrIndex && step.type === 'emitInstruction') {
+      cls += ' bytecode-line-new';
+    }
+    if (i === newestPatchIndex && step.type === 'patchJump') {
+      cls += ' bytecode-line-patched';
+    }
+
+    // Add constant comment for ABx format instructions
+    let comment = '';
+    if ((opName === 'LoadConst' || opName === 'GetGlobal' || opName === 'SetGlobal' || opName === 'Closure') &&
+        instr.bx < data.constants.length) {
+      comment = ' ; ' + data.constants[instr.bx];
+    }
+
+    // Add jump target annotation
+    if (opName === 'Jump' || opName === 'JumpIfTrue' || opName === 'JumpIfFalse') {
+      const target = i + 1 + instr.sbx;
+      comment = ' -> [' + String(target).padStart(4, '0') + ']';
+    }
+
+    html += '<div class="' + cls + '">' +
+      '<span class="bytecode-addr">' + addr + '</span>  ' +
+      '<span class="bytecode-op">' + escapeHtml(opName) + '</span>' +
+      '<span class="bytecode-operands">' + escapeHtml(operands) + '</span>' +
+      (comment ? '<span class="bytecode-comment">' + escapeHtml(comment) + '</span>' : '') +
+      '</div>';
+  }
+
+  html += '</div>';
+
+  // Register map
+  if (highestRegister >= 0) {
+    html += '<div class="bytecode-section">';
+    html += '<div class="bytecode-section-header">Registers</div>';
+    for (let r = 0; r <= highestRegister; r++) {
+      const val = r < regValues.length && regValues[r] ? regValues[r] : '—';
+      const isNew = step.type === 'allocRegister' && r === newestRegister;
+      const cls = isNew ? 'register-entry register-new' : 'register-entry';
+      html += '<div class="' + cls + '">R' + r + ' = ' + escapeHtml(val) + '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Constants pool
+  if (constantsSoFar.length > 0) {
+    html += '<div class="bytecode-section">';
+    html += '<div class="bytecode-section-header">Constants</div>';
+    for (let i = 0; i < constantsSoFar.length; i++) {
+      const idx = constantsSoFar[i];
+      const isNew = step.type === 'addConstant' && step.constantIndex === idx;
+      const cls = isNew ? 'constant-entry constant-new' : 'constant-entry';
+      const val = idx < data.constants.length ? data.constants[idx] : '?';
+      html += '<div class="' + cls + '">K' + idx + ' = ' + escapeHtml(val) + '</div>';
+    }
+    html += '</div>';
+  }
+
+  panels.bytecode.innerHTML = html;
+
+  // Scroll to newest instruction
+  const newLine = panels.bytecode.querySelector('.bytecode-line-new, .bytecode-line-patched');
+  if (newLine) {
+    newLine.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
 // --- Build DOM ---
 
 function buildPlayground(): void {
@@ -723,8 +1170,10 @@ function buildPlayground(): void {
   stepModeSelect.className = 'step-mode-select';
   const optLexer = el('option', { value: 'lexer' }, 'Lexer');
   const optParser = el('option', { value: 'parser' }, 'Parser');
+  const optCompiler = el('option', { value: 'compiler' }, 'Compiler');
   stepModeSelect.appendChild(optLexer);
   stepModeSelect.appendChild(optParser);
+  stepModeSelect.appendChild(optCompiler);
 
   stepToggleBtn = el('button', { className: 'step-toggle' }, 'Step');
 
@@ -755,9 +1204,10 @@ function buildPlayground(): void {
   const panelOutput = el('div', { id: 'panel-output', className: 'panel' });
   panels = { tokens: panelTokens, ast: panelAst, bytecode: panelBytecode, output: panelOutput };
 
-  // Split labels for parser mode
+  // Split labels for parser/compiler modes
   splitLabelTokens = el('div', { className: 'split-label', 'data-for': 'tokens' }, 'Tokens');
   splitLabelAst = el('div', { className: 'split-label', 'data-for': 'ast' }, 'AST');
+  splitLabelBytecode = el('div', { className: 'split-label', 'data-for': 'bytecode' }, 'Bytecode');
 
   outputPane = el('div', { className: 'output-pane' },
     tabBar,
@@ -765,7 +1215,8 @@ function buildPlayground(): void {
     stepInfoEl,
     splitLabelTokens, panelTokens,
     splitLabelAst, panelAst,
-    panelBytecode, panelOutput,
+    splitLabelBytecode, panelBytecode,
+    panelOutput,
   );
 
   // Main layout
@@ -800,7 +1251,7 @@ function buildPlayground(): void {
 
   // Step mode select
   stepModeSelect.addEventListener('change', () => {
-    stepModeType = stepModeSelect.value as 'lexer' | 'parser';
+    stepModeType = stepModeSelect.value as 'lexer' | 'parser' | 'compiler';
     if (stepMode) {
       exitStepMode();
       enterStepMode();
