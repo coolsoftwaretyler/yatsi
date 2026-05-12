@@ -239,6 +239,124 @@ std::string parse_traced(const std::string& source) {
   return json;
 }
 
+std::string compile_traced(const std::string& source) {
+  // Tokenize
+  yatsi::Lexer lexer(std::string(source), "<playground>");
+  auto tokens = lexer.tokenize();
+
+  // Parse
+  yatsi::Parser parser(tokens, "<playground>");
+  auto program = parser.parse();
+
+  if (parser.has_errors()) {
+    std::string json = "{\"errors\":[";
+    const auto& errs = parser.errors();
+    for (size_t i = 0; i < errs.size(); ++i) {
+      if (i > 0) json += ",";
+      json += "\"" + json_escape(errs[i]) + "\"";
+    }
+    json += "]}";
+    return json;
+  }
+
+  // AST string
+  std::ostringstream ast_out;
+  yatsi::print_ast(program, ast_out);
+  std::string ast_str = ast_out.str();
+
+  // Compile with tracing
+  std::vector<yatsi::CompilerStep> trace;
+  yatsi::GarbageCollector gc;
+  yatsi::Compiler compiler(gc);
+  compiler.enable_tracing(trace);
+  auto func = compiler.compile(program);
+
+  // Disassemble for full bytecode string
+  std::ostringstream bytecode_out;
+  yatsi::disassemble(func, bytecode_out);
+
+  // Serialize steps
+  std::string json = "{\"steps\":[";
+  for (size_t i = 0; i < trace.size(); ++i) {
+    const auto& step = trace[i];
+    if (i > 0) json += ",";
+    json += "{\"type\":\"";
+    switch (step.type) {
+    case yatsi::CompilerStep::Type::EnterNode:      json += "enterNode"; break;
+    case yatsi::CompilerStep::Type::ExitNode:        json += "exitNode"; break;
+    case yatsi::CompilerStep::Type::AllocRegister:   json += "allocRegister"; break;
+    case yatsi::CompilerStep::Type::EmitInstruction: json += "emitInstruction"; break;
+    case yatsi::CompilerStep::Type::AddConstant:     json += "addConstant"; break;
+    case yatsi::CompilerStep::Type::PatchJump:       json += "patchJump"; break;
+    case yatsi::CompilerStep::Type::PushLoop:        json += "pushLoop"; break;
+    case yatsi::CompilerStep::Type::PopLoop:         json += "popLoop"; break;
+    }
+    json += "\",\"depth\":";
+    json += std::to_string(step.depth);
+    json += ",\"nodeType\":\"";
+    json += json_escape(step.node_type);
+    json += "\",\"desc\":\"";
+    json += json_escape(step.description);
+    json += "\"";
+    if (step.instruction_index >= 0) {
+      json += ",\"instrIndex\":";
+      json += std::to_string(step.instruction_index);
+    }
+    if (step.register_id >= 0) {
+      json += ",\"registerId\":";
+      json += std::to_string(step.register_id);
+    }
+    if (step.constant_index >= 0) {
+      json += ",\"constantIndex\":";
+      json += std::to_string(step.constant_index);
+    }
+    if (step.patch_target >= 0) {
+      json += ",\"patchTarget\":";
+      json += std::to_string(step.patch_target);
+    }
+    json += "}";
+  }
+
+  // Serialize instructions
+  json += "],\"instructions\":[";
+  for (size_t i = 0; i < func.code.size(); ++i) {
+    const auto& instr = func.code[i];
+    if (i > 0) json += ",";
+    json += "{\"opcode\":\"";
+    json += json_escape(std::string(yatsi::opcode_name(instr.opcode())));
+    json += "\",\"a\":";
+    json += std::to_string(instr.a());
+    json += ",\"b\":";
+    json += std::to_string(instr.b());
+    json += ",\"c\":";
+    json += std::to_string(instr.c());
+    json += ",\"bx\":";
+    json += std::to_string(instr.bx());
+    json += ",\"sbx\":";
+    json += std::to_string(instr.sbx());
+    json += "}";
+  }
+
+  // Serialize constants
+  json += "],\"constants\":[";
+  for (size_t i = 0; i < func.constants.size(); ++i) {
+    if (i > 0) json += ",";
+    json += "\"" + json_escape(func.constants[i].to_debug_string()) + "\"";
+  }
+
+  json += "],\"registerCount\":";
+  json += std::to_string(func.register_count);
+
+  json += ",\"ast\":\"";
+  json += json_escape(ast_str);
+
+  json += "\",\"bytecode\":\"";
+  json += json_escape(bytecode_out.str());
+
+  json += "\",\"errors\":[]}";
+  return json;
+}
+
 std::string run_pipeline(const std::string& source) {
   // Tokenize
   yatsi::Lexer lexer(std::string(source), "<playground>");
@@ -311,4 +429,5 @@ EMSCRIPTEN_BINDINGS(yatsi_playground) {
   emscripten::function("run_pipeline", &run_pipeline);
   emscripten::function("tokenize_traced", &tokenize_traced);
   emscripten::function("parse_traced", &parse_traced);
+  emscripten::function("compile_traced", &compile_traced);
 }

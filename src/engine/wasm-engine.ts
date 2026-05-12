@@ -13,6 +13,7 @@ interface YatsiModule {
   run_pipeline(source: string): string;
   tokenize_traced(source: string): string;
   parse_traced(source: string): string;
+  compile_traced(source: string): string;
 }
 
 type CreateYatsi = () => Promise<YatsiModule>;
@@ -54,6 +55,10 @@ export class YatsiEngine {
 
   parseTraced(source: string): string {
     return this.module.parse_traced(source);
+  }
+
+  compileTraced(source: string): string {
+    return this.module.compile_traced(source);
   }
 
   destroy(): void {
