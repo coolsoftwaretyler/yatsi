@@ -750,7 +750,52 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           TraceNode tn(trace_, &trace_depth_, "ArrowFunction", "",
                        expr.location.line, expr.location.column);
           dest = allocate_register();
-          std::cerr << "warning: ArrowFunction not yet compiled\n";
+          // Save compiler state
+          BytecodeFunction *saved_function = current_function_;
+          std::vector<Local> saved_locals = std::move(locals_);
+          int saved_depth = scope_depth_;
+          BytecodeFunction child;
+          child.name = "<arrow>";
+          // TODO: check the param size somewhere since size_t can be larger
+          // than uint8_t
+          child.param_count = static_cast<uint8_t>(node.params.size());
+          current_function_ = &child;
+          scope_depth_ = 1;
+          locals_.clear();
+
+          // Register parameters as locals
+          for (const auto &param : node.params) {
+            uint8_t r = allocate_register();
+            locals_.push_back({param.name, r, scope_depth_});
+          }
+
+          // Compile body — expression or block
+          if (auto *expr_body = std::get_if<ExprPtr>(&node.body)) {
+            // Expression body: compile expr, emit Return
+            uint8_t val = compile_expr(**expr_body);
+            emit_abc(OpCode::Return, val, 0, 0);
+          } else if (auto *stmt_body = std::get_if<StmtPtr>(&node.body)) {
+            // Block body: compile block statements
+            if (auto *block = std::get_if<BlockStmt>(&**stmt_body)) {
+              for (const auto &s : block->statements) {
+                compile_stmt(*s);
+              }
+            }
+            // Implicit return undefined
+            emit_abc(OpCode::ReturnUndef, 0, 0, 0);
+          }
+
+          // Restore compiler state
+          current_function_ = saved_function;
+          locals_ = std::move(saved_locals);
+          scope_depth_ = saved_depth;
+
+          // Add child to parent and emit Closure
+          uint16_t func_index =
+              static_cast<uint16_t>(current_function_->functions.size());
+          current_function_->functions.push_back(std::move(child));
+          dest = allocate_register();
+          emit_abx(OpCode::Closure, dest, func_index);
 
         } else if constexpr (std::is_same_v<T, ConditionalExpr>) {
           TraceNode tn(trace_, &trace_depth_, "ConditionalExpr", "",
