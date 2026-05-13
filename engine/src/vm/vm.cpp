@@ -299,11 +299,15 @@ InterpretResult VM::execute(BytecodeFunction &func) {
       break;
     }
 
-    case OpCode::ReturnUndef:
+    case OpCode::ReturnUndef: {
+      uint16_t callee_base = cf.base_register;
       call_stack_.pop_back();
       if (call_stack_.empty())
         return InterpretResult::Ok;
+      // Store undefined in the caller's result slot (one before callee's base)
+      registers_[callee_base - 1] = Value::undefined();
       break;
+    }
 
     default:
       std::cerr << "VM error: unhandled opcode " << opcode_name(instr.opcode())
