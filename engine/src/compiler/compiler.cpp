@@ -479,9 +479,18 @@ void Compiler::compile_stmt(const Stmt &stmt) {
           // the current function, scope depth, and locals stack
           BytecodeFunction child;
           child.name = node.name;
+          // Note, we should eventually warn or error if a function has more
+          // than 256 args
+          child.param_count = static_cast<uint8_t>(node.params.size());
           current_function_ = &child;
           scope_depth_ = 1;
           locals_.clear();
+
+          // Register the parameters as locals in consecutive order her
+          for (const auto &param : node.params) {
+            uint8_t reg = allocate_register();
+            locals_.push_back({param.name, reg, scope_depth_});
+          }
 
           // We compile the body of the function
           if (auto *block = std::get_if<BlockStmt>(&*node.body)) {
@@ -512,7 +521,12 @@ void Compiler::compile_stmt(const Stmt &stmt) {
         } else if constexpr (std::is_same_v<T, ReturnStmt>) {
           TraceNode tn(trace_, &trace_depth_, "ReturnStmt", "",
                        stmt.location.line, stmt.location.column);
-          std::cerr << "warning: ReturnStmt not yet compiled\n";
+          if (node.value) {
+            uint8_t val_reg = compile_expr(*node.value);
+            emit_abc(OpCode::Return, val_reg, 0, 0);
+          } else {
+            emit_abc(OpCode::ReturnUndef, 0, 0, 0);
+          }
         }
       },
       static_cast<const Stmt::variant &>(stmt));
