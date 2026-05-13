@@ -289,6 +289,16 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         cf.ip += instr.sbx();
       break;
 
+    case OpCode::Return: {
+      Value return_val = reg(instr.a());
+      uint16_t callee_base = cf.base_register;
+      call_stack_.pop_back();
+      if (call_stack_.empty())
+        return InterpretResult::Ok;
+      registers_[callee_base - 1] = return_val;
+      break;
+    }
+
     case OpCode::ReturnUndef:
       call_stack_.pop_back();
       if (call_stack_.empty())
