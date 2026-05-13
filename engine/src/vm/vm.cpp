@@ -248,6 +248,10 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         std::cerr << "Runtime error: attempting to call a non-function value\n";
         return InterpretResult::RuntimeError;
       }
+      if (call_stack_.size() >= kMaxCallDepth) {
+        std::cerr << "Runtime error: maximum call stack depth exceeded\n";
+        return InterpretResult::RuntimeError;
+      }
       JsFunction *fn = callee_val.as_function();
       CallFrame new_frame;
       new_frame.function = fn->prototype();
