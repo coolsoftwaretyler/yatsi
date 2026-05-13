@@ -37,6 +37,8 @@ private:
 
   // Flat register file — each CallFrame gets a window into this
   static constexpr size_t kMaxRegisters = 256 * 64;
+  // Protect against stack overflow, limit call depth to 256
+  static constexpr size_t kMaxCallDepth = 256;
   std::array<Value, kMaxRegisters> registers_;
 
   // Call stack
