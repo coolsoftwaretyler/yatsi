@@ -10,7 +10,7 @@ Build the native CLI binary and run all custom tests against it.
 
 ### Steps
 
-1. Build the CLI (skip if `engine/build-cli/yatsi_cli` is already up to date):
+1. Build the CLI (never skip this part, it's trivial and important that we have the latest build, even if it looks like there are no changes in git)
 
 ```bash
 ./build-cli.sh
