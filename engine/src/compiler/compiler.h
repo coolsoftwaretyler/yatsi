@@ -34,7 +34,8 @@ struct CompilerStep {
 
 struct LoopContext {
   size_t continue_target; // where `continue` jumps to
-  std::vector<size_t> break_jumps; // break indices we have to fill in with back-patching
+  std::vector<size_t>
+      break_jumps; // break indices we have to fill in with back-patching
   std::vector<size_t> continue_jumps; // continue jump indices to patch
   bool is_for_loop = false; // we have to indicate for loops for specific logic
 };
@@ -44,26 +45,49 @@ struct Local {
   std::string name;
   uint8_t reg;
   int depth;
+  bool is_captured = false;
+};
+
+struct UpvalueInfo {
+  uint8_t index;
+  bool is_local;
 };
 
 class Compiler {
 public:
-  explicit Compiler(GarbageCollector& gc);
+  explicit Compiler(GarbageCollector &gc);
 
-  BytecodeFunction compile(const Program& program);
-  void enable_tracing(std::vector<CompilerStep>& trace);
+  BytecodeFunction compile(const Program &program);
+  void enable_tracing(std::vector<CompilerStep> &trace);
 
 private:
-  GarbageCollector& gc_;
-  BytecodeFunction* current_function_ = nullptr;
+  GarbageCollector &gc_;
+  BytecodeFunction *current_function_ = nullptr;
   std::vector<LoopContext> loop_stack_;
   std::vector<Local> locals_;
   int scope_depth_ = 0; // A scope depth of 0 indicates the global scope
+
+  std::vector<UpvalueInfo> upvalues_;
+
+  struct EnclosingState {
+    BytecodeFunction *function;
+    std::vector<Local> locals;
+    std::vector<UpvalueInfo> upvalues;
+    int scope_depth;
+    EnclosingState *enclosing;
+  };
+
+  EnclosingState *enclosing_ = nullptr;
+
   void begin_scope();
   void end_scope();
   // Returns register number or -1 if not found
-  int resolve_local(const std::string& name);
-  std::vector<CompilerStep>* trace_ = nullptr;
+  int resolve_local(const std::string &name);
+
+  int resolve_upvalue(const std::string& name);
+  int add_upvalue(uint8_t index, bool is_local);
+
+  std::vector<CompilerStep> *trace_ = nullptr;
   size_t trace_depth_ = 0;
   void trace_step(CompilerStep step);
 
@@ -72,7 +96,7 @@ private:
 
   // Constant pool management
   uint16_t add_constant(Value val);
-  uint16_t add_string_constant(const std::string& str);
+  uint16_t add_string_constant(const std::string &str);
 
   // Emit helpers
   void emit(Instruction instr);
@@ -81,14 +105,16 @@ private:
   void emit_asbx(OpCode op, uint8_t a, int16_t sbx);
 
   // Jump/backpatching helpers
-  size_t emit_jump(OpCode op, uint8_t a = 0); // emit a jump with offset 0, returns the index
+  size_t
+  emit_jump(OpCode op,
+            uint8_t a = 0);      // emit a jump with offset 0, returns the index
   void patch_jump(size_t index); // patch to current position
   void patch_jump_to(size_t index, size_t target); // patches to specific target
   size_t current_offset(); // return the current code size
 
   // AST visitors
-  void compile_stmt(const Stmt& stmt);
-  uint8_t compile_expr(const Expr& expr); // returns register holding result
+  void compile_stmt(const Stmt &stmt);
+  uint8_t compile_expr(const Expr &expr); // returns register holding result
 };
 
 } // namespace yatsi

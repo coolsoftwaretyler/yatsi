@@ -134,11 +134,17 @@ struct Instruction {
   }
 };
 
+struct UpvalueDesc {
+  uint8_t index;
+  bool is_local;
+};
+
 struct BytecodeFunction {
   std::string name;
   std::vector<Instruction> code;
   std::vector<Value> constants;
   std::vector<BytecodeFunction> functions;
+  std::vector<UpvalueDesc> upvalue_descs;
   uint8_t register_count = 0;
   uint8_t param_count = 0;
   std::vector<uint32_t> line_numbers;
