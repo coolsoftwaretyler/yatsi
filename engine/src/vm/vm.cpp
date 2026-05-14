@@ -229,6 +229,28 @@ InterpretResult VM::execute(BytecodeFunction &func) {
       break;
     }
 
+    case OpCode::GetUpvalue: {
+      // GetUpvalue A, B — R[A] = upvalues[B]
+      uint8_t uv_idx = instr.b();
+      Upvalue *uv = cf.closure->upvalues[uv_idx];
+      reg(instr.a()) = *uv->location;
+      break;
+    }
+
+    case OpCode::SetUpvalue: {
+      // SetUpvalue A, B — upvalues[B] = R[A]
+      uint8_t uv_idx = instr.b();
+      Upvalue *uv = cf.closure->upvalues[uv_idx];
+      *uv->location = reg(instr.a());
+      break;
+    }
+
+    case OpCode::CloseUpvalue: {
+      // CloseUpvalue A — close all upvalues at R[A] and above
+      close_upvalues(cf.base_register + instr.a());
+      break;
+    }
+
       // --- Functions ---
 
     case OpCode::Closure: {
@@ -236,6 +258,19 @@ InterpretResult VM::execute(BytecodeFunction &func) {
       uint16_t func_idx = instr.bx();
       BytecodeFunction *proto = &cf.function->functions[func_idx];
       auto *fn = gc_.allocate<JsFunction>(proto);
+
+      // Create upvalues from descriptors
+      for (const auto &desc : proto->upvalue_descs) {
+        if (desc.is_local) {
+          // Capture a local from the current frame
+          uint16_t abs_reg = cf.base_register + desc.index;
+          fn->upvalues.push_back(capture_upvalue(abs_reg));
+        } else {
+          // Copy an upvalue from the enclosing closure
+          fn->upvalues.push_back(cf.closure->upvalues[desc.index]);
+        }
+      }
+
       reg(instr.a()) = Value::object(fn);
       break;
     }
@@ -256,6 +291,7 @@ InterpretResult VM::execute(BytecodeFunction &func) {
       CallFrame new_frame;
       new_frame.function = fn->prototype();
       new_frame.ip = 0;
+      new_frame.closure = fn;
       // Callee's registers start right after the callee slot in the caller's
       // window
       new_frame.base_register = cf.base_register + instr.a() + 1;
@@ -296,6 +332,7 @@ InterpretResult VM::execute(BytecodeFunction &func) {
     case OpCode::Return: {
       Value return_val = reg(instr.a());
       uint16_t callee_base = cf.base_register;
+      close_upvalues(callee_base);
       call_stack_.pop_back();
       if (call_stack_.empty())
         return InterpretResult::Ok;
@@ -305,6 +342,7 @@ InterpretResult VM::execute(BytecodeFunction &func) {
 
     case OpCode::ReturnUndef: {
       uint16_t callee_base = cf.base_register;
+      close_upvalues(callee_base);
       call_stack_.pop_back();
       if (call_stack_.empty())
         return InterpretResult::Ok;
@@ -338,6 +376,44 @@ void VM::collect_garbage() {
   gc_.collect();
 }
 
+Upvalue *VM::capture_upvalue(uint16_t abs_reg) {
+  // Walk the open upvalue list to see if we already have one for this register
+  Upvalue *prev = nullptr;
+  Upvalue *curr = open_upvalues_;
+  while (curr && curr->register_index > abs_reg) {
+    prev = curr;
+    curr = curr->next_open;
+  }
+  // Found an existing open upvalue for this register
+  if (curr && curr->register_index == abs_reg) {
+    return curr;
+  }
+  // Create a new one pointing to the register
+  auto *uv = new Upvalue();
+  uv->location = &registers_[abs_reg];
+  uv->register_index = abs_reg;
+  uv->is_open = true;
+  // Insert into the linked list (sorted descending by register_index)
+  uv->next_open = curr;
+  if (prev) {
+    prev->next_open = uv;
+  } else {
+    open_upvalues_ = uv;
+  }
+  return uv;
+}
+
+void VM::close_upvalues(uint16_t from_reg) {
+  while (open_upvalues_ && open_upvalues_->register_index >= from_reg) {
+    Upvalue *uv = open_upvalues_;
+    uv->closed_value = *uv->location;
+    uv->location = &uv->closed_value;
+    uv->is_open = false;
+    open_upvalues_ = uv->next_open;
+    uv->next_open = nullptr;
+  }
+}
+
 void VM::mark_roots() {
   // Mark registers in use across all active frames
   if (!call_stack_.empty()) {
@@ -359,6 +435,11 @@ void VM::mark_roots() {
     for (auto &val : frame.function->constants) {
       gc_.mark_value(val);
     }
+  }
+
+  // Mark open upvalues (closed upvalues are marked via JsFunction::trace)
+  for (auto *uv = open_upvalues_; uv; uv = uv->next_open) {
+    gc_.mark_value(*uv->location);
   }
 }
 

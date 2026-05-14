@@ -1,7 +1,9 @@
 #include "compiler/compiler.h"
 
+#include "compiler/bytecode.h"
 #include "runtime/js_string.h"
 
+#include <cstdint>
 #include <iostream>
 
 namespace yatsi {
@@ -113,6 +115,55 @@ int Compiler::resolve_local(const std::string &name) {
       return locals_[i].reg;
     }
   }
+  return -1;
+}
+
+int Compiler::add_upvalue(uint8_t index, bool is_local) {
+  // Check if we already have this upvalue
+  for (int i = 0; i < static_cast<int>(upvalues_.size()); ++i) {
+    if (upvalues_[i].index == index && upvalues_[i].is_local == is_local) {
+      return i;
+    }
+  }
+  upvalues_.push_back({index, is_local});
+  return static_cast<int>(upvalues_.size()) - 1;
+}
+
+int Compiler::resolve_upvalue(const std::string &name) {
+  if (!enclosing_)
+    return -1;
+
+  // Check if the variable is a local in the enclosing function
+  for (int i = static_cast<int>(enclosing_->locals.size()) - 1; i >= 0; --i) {
+    if (enclosing_->locals[i].name == name) {
+      enclosing_->locals[i].is_captured = true;
+      return add_upvalue(enclosing_->locals[i].reg, true);
+    }
+  }
+
+  // Check if it's an upvalue in the enclosing function (recursive)
+  // Temproarily restore enclosing state to revove further up
+  auto *saved_enclosing = enclosing_;
+  auto saved_upvalues = std::move(upvalues_);
+
+  // Restore enclosing's context
+  upvalues_ = std::move(enclosing_->upvalues);
+  enclosing_ = enclosing_->enclosing;
+
+  int upvalue_idx = resolve_upvalue(name);
+
+  // Save back what enclosing resolved
+  saved_enclosing->upvalues = std::move(upvalues_);
+  saved_enclosing->enclosing = enclosing_;
+
+  // Restore our state
+  upvalues_ = std::move(saved_upvalues);
+  enclosing_ = saved_enclosing;
+
+  if (upvalue_idx >= 0) {
+    return add_upvalue(static_cast<uint8_t>(upvalue_idx), false);
+  }
+
   return -1;
 }
 
@@ -468,11 +519,13 @@ void Compiler::compile_stmt(const Stmt &stmt) {
         } else if constexpr (std::is_same_v<T, FunctionDecl>) {
           TraceNode tn(trace_, &trace_depth_, "FunctionDecl", node.name,
                        stmt.location.line, stmt.location.column);
-          // First, we save the state of the compiler (which function we were
-          // in, its locals, its scope depth)
-          BytecodeFunction *saved_function = current_function_;
-          std::vector<Local> saved_locals = std::move(locals_);
-          int saved_depth = scope_depth_;
+          // Save compiler state and set up an enclosing state for closures
+          EnclosingState enclosing;
+          enclosing.function = current_function_;
+          enclosing.locals = std::move(locals_);
+          enclosing.upvalues = std::move(upvalues_);
+          enclosing.scope_depth = scope_depth_;
+          enclosing.enclosing = enclosing_;
 
           // Then we create a new BytecodeFunction to represent this function as
           // a child, and we wire it up with the node's names. We intitialize
@@ -485,6 +538,8 @@ void Compiler::compile_stmt(const Stmt &stmt) {
           current_function_ = &child;
           scope_depth_ = 1;
           locals_.clear();
+          upvalues_.clear();
+          enclosing_ = &enclosing;
 
           // Register the parameters as locals in consecutive order her
           for (const auto &param : node.params) {
@@ -503,10 +558,17 @@ void Compiler::compile_stmt(const Stmt &stmt) {
           // eventually we will support other return types.
           emit_abc(OpCode::ReturnUndef, 0, 0, 0);
 
+          // Copy upvalue descriptors into the child BytecodeFunction
+          for (const auto &uv : upvalues_) {
+            child.upvalue_descs.push_back({uv.index, uv.is_local});
+          }
+
           // Restore compiler state from before function compilation
-          current_function_ = saved_function;
-          locals_ = std::move(saved_locals);
-          scope_depth_ = saved_depth;
+          current_function_ = enclosing.function;
+          locals_ = std::move(enclosing.locals);
+          upvalues_ = std::move(enclosing.upvalues);
+          scope_depth_ = enclosing.scope_depth;
+          enclosing_ = enclosing.enclosing;
 
           // Add child to parent's functions vector
           uint16_t func_index =
@@ -583,9 +645,16 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           if (local_reg >= 0) {
             dest = static_cast<uint8_t>(local_reg);
           } else {
-            dest = allocate_register();
-            uint16_t name_idx = add_string_constant(node.name);
-            emit_abx(OpCode::GetGlobal, dest, name_idx);
+            int upvalue_idx = resolve_upvalue(node.name);
+            if (upvalue_idx >= 0) {
+              dest = allocate_register();
+              emit_abc(OpCode::GetUpvalue, dest,
+                       static_cast<uint8_t>(upvalue_idx), 0);
+            } else {
+              dest = allocate_register();
+              uint16_t name_idx = add_string_constant(node.name);
+              emit_abx(OpCode::GetGlobal, dest, name_idx);
+            }
           }
 
         } else if constexpr (std::is_same_v<T, BinaryExpr>) {
@@ -649,10 +718,18 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
               }
               dest = static_cast<uint8_t>(local_reg);
             } else {
-              uint8_t val_reg = compile_expr(*node.value);
-              uint16_t name_idx = add_string_constant(ident->name);
-              emit_abx(OpCode::SetGlobal, val_reg, name_idx);
-              dest = val_reg;
+              int upvalue_idx = resolve_upvalue(ident->name);
+              if (upvalue_idx >= 0) {
+                uint8_t val_reg = compile_expr(*node.value);
+                emit_abc(OpCode::SetUpvalue, val_reg,
+                         static_cast<uint8_t>(upvalue_idx), 0);
+                dest = val_reg;
+              } else {
+                uint8_t val_reg = compile_expr(*node.value);
+                uint16_t name_idx = add_string_constant(ident->name);
+                emit_abx(OpCode::SetGlobal, val_reg, name_idx);
+                dest = val_reg;
+              }
             }
           } else {
             dest = allocate_register();
@@ -751,9 +828,12 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
                        expr.location.line, expr.location.column);
           dest = allocate_register();
           // Save compiler state
-          BytecodeFunction *saved_function = current_function_;
-          std::vector<Local> saved_locals = std::move(locals_);
-          int saved_depth = scope_depth_;
+          EnclosingState enclosing;
+          enclosing.function = current_function_;
+          enclosing.locals = std::move(locals_);
+          enclosing.upvalues = std::move(upvalues_);
+          enclosing.scope_depth = scope_depth_;
+          enclosing.enclosing = enclosing_;
           BytecodeFunction child;
           child.name = "<arrow>";
           // TODO: check the param size somewhere since size_t can be larger
@@ -762,6 +842,8 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           current_function_ = &child;
           scope_depth_ = 1;
           locals_.clear();
+          upvalues_.clear();
+          enclosing_ = &enclosing;
 
           // Register parameters as locals
           for (const auto &param : node.params) {
@@ -785,10 +867,16 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
             emit_abc(OpCode::ReturnUndef, 0, 0, 0);
           }
 
+          for (const auto &uv : upvalues_) {
+            child.upvalue_descs.push_back({uv.index, uv.is_local});
+          }
+
           // Restore compiler state
-          current_function_ = saved_function;
-          locals_ = std::move(saved_locals);
-          scope_depth_ = saved_depth;
+          current_function_ = enclosing.function;
+          locals_ = std::move(enclosing.locals);
+          upvalues_ = std::move(enclosing.upvalues);
+          scope_depth_ = enclosing.scope_depth;
+          enclosing_ = enclosing.enclosing;
 
           // Add child to parent and emit Closure
           uint16_t func_index =
