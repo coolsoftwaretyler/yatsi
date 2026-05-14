@@ -641,10 +641,35 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
         } else if constexpr (std::is_same_v<T, Identifier>) {
           TraceNode tn(trace_, &trace_depth_, "Identifier", node.name,
                        expr.location.line, expr.location.column);
+          // When resolving an identifier, we first attempt to find it in our
+          // locals
           int local_reg = resolve_local(node.name);
+          // If there's a local register for this name, we return that as the destination
           if (local_reg >= 0) {
             dest = static_cast<uint8_t>(local_reg);
           } else {
+            // If we can't find the name in locals, we start walking our upvalues.
+            // Upvalues are what makes a "closure" - gives us the ability to enclose around
+            // variables from outer scope.
+            //
+            // resolve_upvalue will return -1 if there is no enclosing scope, 
+            // or if we cannot find any upvalues through the chain
+            //
+            // The way we actually check the upvalues is by searching all of the enclosing_.locals
+            // to see if any of them have the same name as this identifier we're compiling.
+            // If we find one, we mark its representative Local struct is_captured value as true,
+            // and then we push the index of that local register into the upvalues_ vector.
+            // In this case (resolved in the *locals* of the enclosing function), we mark it as is_local
+            //
+            // But if we do not find it in the enclosing locals,
+            // we then recursively check further up into other enclosing functions.
+            // If we find a match there, we add an upvalue, but mark it as is_local false
+            //
+            // If we found an upvalue in locals or enclosuers, we emit a GetUpvalue instruction,
+            // pointing to the index
+            //
+            // If none of that hits and we end up with `-1`, then we emit a GetGlobal instruction,
+            // because that's our global fallback for resolving values.
             int upvalue_idx = resolve_upvalue(node.name);
             if (upvalue_idx >= 0) {
               dest = allocate_register();
