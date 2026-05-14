@@ -1355,7 +1355,7 @@ body {
 /* Card body: editor + output side by side */
 .cf-card-body {
   display: flex;
-  height: 420px;
+  height: 700px;
 }
 
 .cf-editor-col {
@@ -1628,7 +1628,7 @@ body {
   .cf-card-body {
     flex-direction: column;
     height: auto;
-    min-height: 500px;
+    min-height: 600px;
   }
 
   .cf-editor-col {
@@ -1745,4 +1745,951 @@ body {
 
 .cf-patch-annotation.hidden {
   display: none;
+}
+
+/* ========================================
+   Closures & Upvalues
+   ======================================== */
+
+/* Step badge colors for closure-related step types */
+.step-badge-enterFunction {
+  background: rgba(56, 178, 172, 0.25);
+  color: #4fd1c5;
+}
+
+.step-badge-exitFunction {
+  background: rgba(56, 178, 172, 0.12);
+  color: #81e6d9;
+  opacity: 0.8;
+}
+
+.step-badge-resolveUpvalue {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ffb74d;
+}
+
+.step-badge-markCaptured {
+  background: rgba(233, 30, 99, 0.2);
+  color: #f48fb1;
+}
+
+.step-badge-addUpvalue {
+  background: rgba(159, 122, 234, 0.2);
+  color: #b794f4;
+}
+
+.step-badge-resolveGlobal {
+  background: rgba(113, 128, 150, 0.2);
+  color: #a0aec0;
+}
+
+.step-badge-resolveLocal {
+  background: rgba(72, 187, 120, 0.2);
+  color: #68d391;
+}
+
+.step-badge-resolveLocalNotFound {
+  background: rgba(113, 128, 150, 0.15);
+  color: #718096;
+}
+
+.step-badge-upvalueDedup {
+  background: rgba(159, 122, 234, 0.15);
+  color: #b794f4;
+  opacity: 0.8;
+}
+
+/* Scope stack breadcrumb */
+.cl-scope-stack {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.cl-scope-item {
+  color: var(--text-dim);
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.cl-scope-item-current {
+  color: #4fd1c5;
+  font-weight: 600;
+  background: rgba(56, 178, 172, 0.15);
+}
+
+.cl-scope-sep {
+  color: var(--text-dim);
+  opacity: 0.5;
+  margin: 0 2px;
+}
+
+/* Locals table */
+.cl-locals-table {
+  font-size: 11px;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cl-locals-table th {
+  text-align: left;
+  padding: 2px 8px;
+  font-weight: 600;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cl-locals-table td {
+  padding: 2px 8px;
+  border-bottom: 1px solid rgba(42, 42, 74, 0.5);
+}
+
+.cl-captured-badge {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cl-captured-yes {
+  background: rgba(233, 30, 99, 0.2);
+  color: #f48fb1;
+}
+
+.cl-captured-no {
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+/* Upvalue table */
+.cl-upvalue-table {
+  font-size: 11px;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cl-upvalue-table th {
+  text-align: left;
+  padding: 2px 8px;
+  font-weight: 600;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cl-upvalue-table td {
+  padding: 2px 8px;
+  border-bottom: 1px solid rgba(42, 42, 74, 0.5);
+}
+
+.cl-is-local-badge {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.cl-is-local-true {
+  background: rgba(72, 187, 120, 0.2);
+  color: #68d391;
+}
+
+.cl-is-local-false {
+  background: rgba(255, 152, 0, 0.15);
+  color: #ffb74d;
+}
+
+/* Annotation callout (purple-tinted, like cf-patch-annotation) */
+.cl-annotation {
+  padding: 6px 12px;
+  background: rgba(159, 122, 234, 0.08);
+  border-bottom: 1px solid rgba(159, 122, 234, 0.2);
+  color: #d6bcfa;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.cl-annotation.hidden {
+  display: none;
+}
+
+.cl-annotation-local {
+  background: rgba(72, 187, 120, 0.08);
+  border-bottom-color: rgba(72, 187, 120, 0.2);
+  color: #68d391;
+}
+
+.cl-annotation-upvalue {
+  /* existing purple annotation style — inherited from .cl-annotation */
+}
+
+.cl-annotation-global {
+  background: rgba(237, 137, 54, 0.08);
+  border-bottom-color: rgba(237, 137, 54, 0.2);
+  color: #fbd38d;
+}
+
+/* Closure-related bytecode line highlight */
+.cl-opcode-closure {
+  background: rgba(159, 122, 234, 0.12);
+  color: #b794f4;
+}
+
+/* Closure context panel */
+.cl-context-panel {
+  font-size: 12px;
+}
+
+.cl-context-section {
+  margin-bottom: 8px;
+}
+
+.cl-context-section-header {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+/* Function enter/exit event badges */
+.cl-func-event {
+  padding: 4px 0;
+  margin-bottom: 6px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cl-func-event-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cl-func-enter-badge {
+  background: rgba(56, 178, 172, 0.2);
+  color: #4fd1c5;
+}
+
+.cl-func-exit-badge {
+  background: rgba(56, 178, 172, 0.1);
+  color: #81e6d9;
+}
+
+/* Upvalue table row highlight for new entries */
+.cl-upvalue-new {
+  background: rgba(159, 122, 234, 0.15);
+  font-weight: 600;
+}
+
+/* Locals table row highlight for newly captured */
+.cl-local-captured {
+  background: rgba(233, 30, 99, 0.1);
+}
+
+/* EnclosingState chain visualization */
+.cl-enclosing-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.cl-enclosing-card {
+  border: 1px solid rgba(56, 178, 172, 0.25);
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: rgba(56, 178, 172, 0.04);
+  font-size: 11px;
+}
+
+.cl-enclosing-card-newest {
+  border-color: rgba(56, 178, 172, 0.5);
+  background: rgba(56, 178, 172, 0.08);
+  box-shadow: 0 0 8px rgba(56, 178, 172, 0.1);
+}
+
+.cl-enclosing-card-capturing {
+  border-color: rgba(233, 30, 99, 0.5);
+  background: rgba(233, 30, 99, 0.06);
+  box-shadow: 0 0 12px rgba(233, 30, 99, 0.15);
+}
+
+.cl-enclosing-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(56, 178, 172, 0.15);
+}
+
+.cl-enclosing-func-name {
+  font-weight: 700;
+  color: #4fd1c5;
+  font-size: 12px;
+}
+
+.cl-enclosing-depth {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.cl-enclosing-locals-section {
+  margin: 4px 0 2px;
+}
+
+.cl-enclosing-sub-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+
+.cl-enclosing-locals-table {
+  font-size: 10px;
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+}
+
+.cl-enclosing-locals-table th {
+  text-align: left;
+  padding: 1px 6px;
+  font-weight: 600;
+  color: var(--text-dim);
+  border-bottom: 1px solid rgba(56, 178, 172, 0.15);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cl-enclosing-locals-table td {
+  padding: 1px 6px;
+  border-bottom: 1px solid rgba(42, 42, 74, 0.3);
+  color: var(--text);
+}
+
+.cl-enclosing-td-name {
+  font-weight: 600;
+}
+
+.cl-enclosing-local-just-captured {
+  background: rgba(233, 30, 99, 0.2);
+  animation: cl-capture-pulse 0.6s ease-out;
+}
+
+.cl-enclosing-local-just-captured td {
+  border-bottom-color: rgba(233, 30, 99, 0.3);
+}
+
+@keyframes cl-capture-pulse {
+  0% { background: rgba(233, 30, 99, 0.35); }
+  100% { background: rgba(233, 30, 99, 0.2); }
+}
+
+.cl-enclosing-empty {
+  color: var(--text-dim);
+  opacity: 0.5;
+  font-style: italic;
+  font-size: 10px;
+}
+
+.cl-enclosing-pointer {
+  margin-top: 3px;
+  padding-top: 3px;
+  border-top: 1px solid rgba(56, 178, 172, 0.1);
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+.cl-enclosing-null {
+  color: #f48fb1;
+  font-style: italic;
+}
+
+.cl-enclosing-arrow {
+  text-align: center;
+  color: rgba(56, 178, 172, 0.5);
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 0;
+}
+
+/* Flat bytecode dump: per-function sections */
+.cl-func-section {
+  margin-bottom: 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px 0;
+}
+
+.cl-func-section-active {
+  border-color: rgba(74, 158, 255, 0.35);
+  background: rgba(74, 158, 255, 0.04);
+}
+
+.cl-func-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
+.cl-func-section-active .cl-func-section-header {
+  color: var(--accent);
+  border-bottom-color: rgba(74, 158, 255, 0.3);
+}
+
+.cl-func-section-meta {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+
+/* Upvalue descriptors subsection in flat dump */
+.cl-uvdesc-section {
+  margin-top: 4px;
+  padding: 3px 6px;
+  border-top: 1px solid rgba(42, 42, 74, 0.5);
+}
+
+.cl-uvdesc-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+
+/* ========================================
+   Runtime VM Visualization
+   ======================================== */
+
+/* Mode toggle (compile/runtime) */
+.cl-mode-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-right: 8px;
+}
+
+.cl-mode-toggle-btn {
+  padding: 2px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cl-mode-toggle-btn:hover:not(:disabled) {
+  background: rgba(74, 158, 255, 0.1);
+  color: var(--text);
+}
+
+.cl-mode-toggle-btn.active {
+  background: rgba(74, 158, 255, 0.2);
+  color: var(--accent);
+}
+
+.cl-mode-toggle-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* IP highlight in runtime bytecode view */
+.cl-ip-highlight {
+  background: rgba(255, 183, 77, 0.2);
+  color: #ffb74d;
+  border-left: 2px solid #ffb74d;
+}
+
+/* Call stack */
+.cl-call-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cl-call-stack-frame {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 3px;
+  background: rgba(42, 42, 74, 0.3);
+  color: var(--text-dim);
+}
+
+.cl-call-stack-frame-active {
+  background: rgba(56, 178, 172, 0.15);
+  color: #4fd1c5;
+  font-weight: 600;
+}
+
+.cl-call-stack-name {
+  font-family: var(--font-mono);
+}
+
+.cl-call-stack-base {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  opacity: 0.7;
+}
+
+/* Register write entries */
+.cl-reg-write {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: rgba(74, 158, 255, 0.06);
+  border-radius: 3px;
+  margin-bottom: 2px;
+}
+
+/* Upvalue state entries */
+.cl-upvalue-state {
+  font-size: 11px;
+}
+
+.cl-upvalue-state-entry {
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  background: rgba(159, 122, 234, 0.06);
+  border-radius: 3px;
+  margin-bottom: 2px;
+}
+
+.cl-upvalue-state-label {
+  color: #b794f4;
+  font-weight: 600;
+}
+
+.cl-upvalue-state-name {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.cl-upvalue-state-value {
+  color: var(--text);
+}
+
+.cl-upvalue-state-status {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-left: 4px;
+}
+
+.cl-upvalue-open {
+  background: rgba(72, 187, 120, 0.2);
+  color: #68d391;
+}
+
+.cl-upvalue-closed {
+  background: rgba(233, 30, 99, 0.2);
+  color: #f48fb1;
+}
+
+.cl-upvalue-state-detail {
+  padding: 2px 8px;
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+/* Closure info */
+.cl-closure-info {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: #b794f4;
+}
+
+/* Output panel */
+.cl-output-panel {
+  font-size: 12px;
+}
+
+.cl-output-panel.hidden {
+  display: none;
+}
+
+.cl-output-section.hidden {
+  display: none;
+}
+
+.cl-output-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  color: #68d391;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
+
+/* ========================================
+   Feature 1: Context Panel Tab Bar
+   ======================================== */
+
+.cl-context-tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+.cl-context-tab-btn {
+  padding: 3px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.cl-context-tab-btn:hover {
+  color: var(--text);
+}
+
+.cl-context-tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* Function Explorer cards */
+.cl-func-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.cl-func-card-active {
+  border-color: rgba(74, 158, 255, 0.5);
+  background: rgba(74, 158, 255, 0.04);
+}
+
+.cl-func-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.cl-func-card-name {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cl-func-card-meta {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.cl-func-card-detail {
+  margin-top: 4px;
+  font-size: 10px;
+}
+
+.cl-func-card-detail summary {
+  cursor: pointer;
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cl-func-card-detail summary:hover {
+  color: var(--text);
+}
+
+.cl-func-card-detail-body {
+  padding: 4px 0 0 12px;
+}
+
+.cl-func-card-entry {
+  padding: 1px 0;
+  font-family: inherit;
+  color: var(--text);
+}
+
+.cl-func-card-instr-list {
+  font-size: 11px;
+}
+
+.cl-func-card-instr {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.cl-func-card-instr-idx {
+  color: var(--text-dim);
+  opacity: 0.5;
+  min-width: 32px;
+}
+
+.cl-func-card-instr-ops {
+  color: var(--text-dim);
+}
+
+.cl-func-card-instr-active {
+  background: rgba(99, 102, 241, 0.15);
+  border-radius: 2px;
+  padding-left: 2px;
+  margin-left: -2px;
+}
+
+/* ========================================
+   Feature 2: Source/AST Tab Bar
+   ======================================== */
+
+.cl-source-tab-bar {
+  display: flex;
+  margin-bottom: 4px;
+}
+
+.cl-source-tab-btn {
+  padding: 2px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.cl-source-tab-btn:hover {
+  color: var(--text);
+}
+
+.cl-source-tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* AST overlay — same layout as .cf-source-overlay */
+.cl-ast-overlay {
+  flex: 1;
+  width: 100%;
+  margin: 0;
+  border: none;
+  outline: none;
+  padding: 0;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  background: var(--bg-editor);
+  color: var(--text);
+  overflow-y: auto;
+  tab-size: 2;
+}
+
+.cl-ast-overlay.hidden {
+  display: none;
+}
+
+.cl-ast-line {
+  white-space: pre;
+  line-height: 1.6;
+  padding: 0 12px;
+}
+
+.cl-ast-active {
+  color: var(--accent);
+  font-weight: 700;
+  background: rgba(74, 158, 255, 0.1);
+}
+
+.cl-ast-visited {
+  color: var(--text);
+}
+
+.cl-ast-dimmed {
+  opacity: 0.35;
+}
+
+.cl-ast-label {
+  font-style: italic;
+  opacity: 0.4;
+}
+
+/* ========================================
+   Feature 3: Resolution Chain
+   ======================================== */
+
+.cl-resolution-chain {
+  padding: 6px 12px;
+  background: rgba(74, 158, 255, 0.04);
+  border-bottom: 1px solid rgba(74, 158, 255, 0.15);
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.cl-resolution-chain.hidden {
+  display: none;
+}
+
+.cl-resolution-header {
+  margin-bottom: 4px;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.cl-resolution-header strong {
+  color: var(--text);
+}
+
+.cl-resolution-step {
+  padding: 1px 0;
+  font-size: 11px;
+  font-family: inherit;
+  color: var(--text-dim);
+}
+
+.cl-resolution-active {
+  color: var(--text);
+  font-weight: 600;
+  background: rgba(74, 158, 255, 0.08);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+.cl-resolution-connector {
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+.cl-resolution-category {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.cl-resolution-hit {
+  color: #68d391;
+}
+
+.cl-resolution-miss {
+  color: #718096;
+}
+
+.cl-resolution-desc {
+  font-family: inherit;
+}
+
+/* ========================================
+   Feature 6: Interleaved Bytecode View
+   ======================================== */
+
+.cl-bytecode-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.cl-bytecode-view-btn {
+  padding: 1px 8px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cl-bytecode-view-btn:hover {
+  background: rgba(74, 158, 255, 0.1);
+  color: var(--text);
+}
+
+.cl-bytecode-view-btn.active {
+  background: rgba(74, 158, 255, 0.2);
+  color: var(--accent);
+}
+
+.cl-interleaved-bracket {
+  border-left: 2px solid var(--border);
+  padding-left: 12px;
+  margin-left: 8px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.cl-interleaved-header {
+  font-size: 10px;
+  font-style: italic;
+  color: var(--text-dim);
+  padding: 2px 0;
+}
+
+.cl-interleaved-footer {
+  font-size: 10px;
+  color: var(--text-dim);
+  opacity: 0.5;
+  padding: 1px 0;
+}
+
+.cl-interleaved-compiling {
+  border-left-color: rgba(74, 158, 255, 0.5);
 }

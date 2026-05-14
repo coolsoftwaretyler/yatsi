@@ -16,6 +16,7 @@ export default defineConfig({
         custom: resolve(__dirname, 'custom/index.html'),
         playground: resolve(__dirname, 'playground/index.html'),
         'control-flow-compilation': resolve(__dirname, 'control-flow-compilation/index.html'),
+        closures: resolve(__dirname, 'closures/index.html'),
       },
     },
   },
