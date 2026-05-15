@@ -29,6 +29,10 @@ function init(): void {
       el('h2', {}, 'Control Flow'),
       el('p', {}, 'Visualize how if/else, while, and for loops compile to bytecode with jump patching.'),
     ),
+    el('a', { className: 'home-card', href: './closures/' },
+      el('h2', {}, 'Closures & Upvalues'),
+      el('p', {}, 'Step through how closures capture variables via upvalues across nested function scopes.'),
+    ),
   );
 
   root.appendChild(header);

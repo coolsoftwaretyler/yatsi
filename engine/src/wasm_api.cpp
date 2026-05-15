@@ -1,4 +1,5 @@
 #include <emscripten/bind.h>
+#include <functional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -11,6 +12,7 @@
 #include "parser/parser.h"
 #include "runtime/gc.h"
 #include "vm/vm.h"
+#include "vm/vm_step.h"
 
 namespace {
 
@@ -304,6 +306,15 @@ std::string compile_traced(const std::string& source) {
     case yatsi::CompilerStep::Type::PatchJump:       json += "patchJump"; break;
     case yatsi::CompilerStep::Type::PushLoop:        json += "pushLoop"; break;
     case yatsi::CompilerStep::Type::PopLoop:         json += "popLoop"; break;
+    case yatsi::CompilerStep::Type::EnterFunction:   json += "enterFunction"; break;
+    case yatsi::CompilerStep::Type::ExitFunction:    json += "exitFunction"; break;
+    case yatsi::CompilerStep::Type::ResolveUpvalue:  json += "resolveUpvalue"; break;
+    case yatsi::CompilerStep::Type::MarkCaptured:    json += "markCaptured"; break;
+    case yatsi::CompilerStep::Type::AddUpvalue:      json += "addUpvalue"; break;
+    case yatsi::CompilerStep::Type::ResolveGlobal:        json += "resolveGlobal"; break;
+    case yatsi::CompilerStep::Type::ResolveLocal:        json += "resolveLocal"; break;
+    case yatsi::CompilerStep::Type::ResolveLocalNotFound: json += "resolveLocalNotFound"; break;
+    case yatsi::CompilerStep::Type::UpvalueDedup:        json += "upvalueDedup"; break;
     }
     json += "\",\"depth\":";
     json += std::to_string(step.depth);
@@ -335,6 +346,31 @@ std::string compile_traced(const std::string& source) {
     if (step.source_column >= 0) {
       json += ",\"col\":";
       json += std::to_string(step.source_column);
+    }
+    if (!step.function_name.empty()) {
+      json += ",\"functionName\":\"";
+      json += json_escape(step.function_name);
+      json += "\"";
+    }
+    if (!step.variable_name.empty()) {
+      json += ",\"variableName\":\"";
+      json += json_escape(step.variable_name);
+      json += "\"";
+    }
+    if (step.upvalue_index >= 0) {
+      json += ",\"upvalueIndex\":";
+      json += std::to_string(step.upvalue_index);
+    }
+    if (step.is_local_upvalue) {
+      json += ",\"isLocalUpvalue\":true";
+    }
+    if (step.param_count >= 0) {
+      json += ",\"paramCount\":";
+      json += std::to_string(step.param_count);
+    }
+    if (step.upvalue_count >= 0) {
+      json += ",\"upvalueCount\":";
+      json += std::to_string(step.upvalue_count);
     }
     json += "}";
   }
@@ -369,6 +405,70 @@ std::string compile_traced(const std::string& source) {
   json += "],\"registerCount\":";
   json += std::to_string(func.register_count);
 
+  // Serialize child functions recursively
+  std::function<void(const yatsi::BytecodeFunction&, std::string&)> serialize_function;
+  serialize_function = [&](const yatsi::BytecodeFunction& fn, std::string& out) {
+    out += "{\"name\":\"";
+    out += json_escape(fn.name);
+    out += "\",\"paramCount\":";
+    out += std::to_string(fn.param_count);
+    out += ",\"registerCount\":";
+    out += std::to_string(fn.register_count);
+
+    // Instructions
+    out += ",\"instructions\":[";
+    for (size_t i = 0; i < fn.code.size(); ++i) {
+      const auto& instr = fn.code[i];
+      if (i > 0) out += ",";
+      out += "{\"opcode\":\"";
+      out += json_escape(std::string(yatsi::opcode_name(instr.opcode())));
+      out += "\",\"a\":";
+      out += std::to_string(instr.a());
+      out += ",\"b\":";
+      out += std::to_string(instr.b());
+      out += ",\"c\":";
+      out += std::to_string(instr.c());
+      out += ",\"bx\":";
+      out += std::to_string(instr.bx());
+      out += ",\"sbx\":";
+      out += std::to_string(instr.sbx());
+      out += "}";
+    }
+
+    // Constants
+    out += "],\"constants\":[";
+    for (size_t i = 0; i < fn.constants.size(); ++i) {
+      if (i > 0) out += ",";
+      out += "\"" + json_escape(fn.constants[i].to_debug_string()) + "\"";
+    }
+
+    // Upvalue descriptors
+    out += "],\"upvalueDescs\":[";
+    for (size_t i = 0; i < fn.upvalue_descs.size(); ++i) {
+      if (i > 0) out += ",";
+      out += "{\"index\":";
+      out += std::to_string(fn.upvalue_descs[i].index);
+      out += ",\"isLocal\":";
+      out += fn.upvalue_descs[i].is_local ? "true" : "false";
+      out += "}";
+    }
+
+    // Nested functions (recursive)
+    out += "],\"functions\":[";
+    for (size_t i = 0; i < fn.functions.size(); ++i) {
+      if (i > 0) out += ",";
+      serialize_function(fn.functions[i], out);
+    }
+    out += "]}";
+  };
+
+  json += ",\"functions\":[";
+  for (size_t i = 0; i < func.functions.size(); ++i) {
+    if (i > 0) json += ",";
+    serialize_function(func.functions[i], json);
+  }
+  json += "]";
+
   json += ",\"ast\":\"";
   json += json_escape(ast_str);
 
@@ -381,6 +481,239 @@ std::string compile_traced(const std::string& source) {
     return "{\"errors\":[\"" + json_escape(e.what()) + "\"]}";
   } catch (...) {
     return "{\"errors\":[\"unknown exception\"]}";
+  }
+}
+
+std::string execute_traced(const std::string& source) {
+  try {
+  // Tokenize
+  yatsi::Lexer lexer(std::string(source), "<playground>");
+  auto tokens = lexer.tokenize();
+
+  // Parse
+  yatsi::Parser parser(tokens, "<playground>");
+  auto program = parser.parse();
+
+  if (parser.has_errors()) {
+    std::string json = "{\"error\":\"";
+    const auto& errs = parser.errors();
+    for (size_t i = 0; i < errs.size(); ++i) {
+      if (i > 0) json += "; ";
+      json += json_escape(errs[i]);
+    }
+    json += "\",\"steps\":[],\"program\":null,\"output\":\"\"}";
+    return json;
+  }
+
+  // Compile
+  yatsi::GarbageCollector gc;
+  yatsi::Compiler compiler(gc);
+  auto func = compiler.compile(program);
+
+  // Disassemble
+  std::ostringstream bytecode_out;
+  yatsi::disassemble(func, bytecode_out);
+
+  // Execute with tracing
+  std::vector<yatsi::VMStep> trace;
+  std::ostringstream captured;
+  yatsi::VM vm(gc, captured);
+  vm.enable_tracing(trace);
+  auto result = vm.execute(func);
+
+  // Build JSON output
+  std::string json = "{";
+
+  // Serialize the program (reuse compile_traced's serialization approach)
+  std::function<void(const yatsi::BytecodeFunction&, std::string&)> serialize_function;
+  serialize_function = [&](const yatsi::BytecodeFunction& fn, std::string& out) {
+    out += "{\"name\":\"";
+    out += json_escape(fn.name);
+    out += "\",\"paramCount\":";
+    out += std::to_string(fn.param_count);
+    out += ",\"registerCount\":";
+    out += std::to_string(fn.register_count);
+    out += ",\"instructions\":[";
+    for (size_t i = 0; i < fn.code.size(); ++i) {
+      const auto& instr = fn.code[i];
+      if (i > 0) out += ",";
+      out += "{\"opcode\":\"";
+      out += json_escape(std::string(yatsi::opcode_name(instr.opcode())));
+      out += "\",\"a\":";
+      out += std::to_string(instr.a());
+      out += ",\"b\":";
+      out += std::to_string(instr.b());
+      out += ",\"c\":";
+      out += std::to_string(instr.c());
+      out += ",\"bx\":";
+      out += std::to_string(instr.bx());
+      out += ",\"sbx\":";
+      out += std::to_string(instr.sbx());
+      out += "}";
+    }
+    out += "],\"constants\":[";
+    for (size_t i = 0; i < fn.constants.size(); ++i) {
+      if (i > 0) out += ",";
+      out += "\"" + json_escape(fn.constants[i].to_debug_string()) + "\"";
+    }
+    out += "],\"upvalueDescs\":[";
+    for (size_t i = 0; i < fn.upvalue_descs.size(); ++i) {
+      if (i > 0) out += ",";
+      out += "{\"index\":";
+      out += std::to_string(fn.upvalue_descs[i].index);
+      out += ",\"isLocal\":";
+      out += fn.upvalue_descs[i].is_local ? "true" : "false";
+      out += "}";
+    }
+    out += "],\"functions\":[";
+    for (size_t i = 0; i < fn.functions.size(); ++i) {
+      if (i > 0) out += ",";
+      serialize_function(fn.functions[i], out);
+    }
+    out += "]}";
+  };
+
+  // Program object (top-level function)
+  json += "\"program\":{\"instructions\":[";
+  for (size_t i = 0; i < func.code.size(); ++i) {
+    const auto& instr = func.code[i];
+    if (i > 0) json += ",";
+    json += "{\"opcode\":\"";
+    json += json_escape(std::string(yatsi::opcode_name(instr.opcode())));
+    json += "\",\"a\":";
+    json += std::to_string(instr.a());
+    json += ",\"b\":";
+    json += std::to_string(instr.b());
+    json += ",\"c\":";
+    json += std::to_string(instr.c());
+    json += ",\"bx\":";
+    json += std::to_string(instr.bx());
+    json += ",\"sbx\":";
+    json += std::to_string(instr.sbx());
+    json += "}";
+  }
+  json += "],\"constants\":[";
+  for (size_t i = 0; i < func.constants.size(); ++i) {
+    if (i > 0) json += ",";
+    json += "\"" + json_escape(func.constants[i].to_debug_string()) + "\"";
+  }
+  json += "],\"registerCount\":";
+  json += std::to_string(func.register_count);
+  json += ",\"functions\":[";
+  for (size_t i = 0; i < func.functions.size(); ++i) {
+    if (i > 0) json += ",";
+    serialize_function(func.functions[i], json);
+  }
+  json += "],\"bytecode\":\"";
+  json += json_escape(bytecode_out.str());
+  json += "\"}";
+
+  // Serialize VM steps
+  json += ",\"steps\":[";
+  for (size_t i = 0; i < trace.size(); ++i) {
+    const auto& step = trace[i];
+    if (i > 0) json += ",";
+    json += "{\"type\":\"";
+    switch (step.type) {
+    case yatsi::VMStep::Type::Execute:        json += "execute"; break;
+    case yatsi::VMStep::Type::Call:            json += "call"; break;
+    case yatsi::VMStep::Type::Return:          json += "return"; break;
+    case yatsi::VMStep::Type::CaptureUpvalue:  json += "captureUpvalue"; break;
+    case yatsi::VMStep::Type::CloseUpvalue:    json += "closeUpvalue"; break;
+    case yatsi::VMStep::Type::ReadUpvalue:     json += "readUpvalue"; break;
+    case yatsi::VMStep::Type::WriteUpvalue:    json += "writeUpvalue"; break;
+    }
+    json += "\",\"opcode\":\"";
+    json += json_escape(step.opcode_name);
+    json += "\",\"a\":";
+    json += std::to_string(step.a);
+    json += ",\"b\":";
+    json += std::to_string(step.b);
+    json += ",\"c\":";
+    json += std::to_string(step.c);
+    json += ",\"bx\":";
+    json += std::to_string(step.bx);
+    json += ",\"sbx\":";
+    json += std::to_string(step.sbx);
+    json += ",\"ip\":";
+    json += std::to_string(step.ip);
+    json += ",\"functionName\":\"";
+    json += json_escape(step.function_name);
+    json += "\",\"callDepth\":";
+    json += std::to_string(step.call_depth);
+    json += ",\"baseRegister\":";
+    json += std::to_string(step.base_register);
+    json += ",\"desc\":\"";
+    json += json_escape(step.description);
+    json += "\"";
+
+    // Register writes
+    if (!step.reg_writes.empty()) {
+      json += ",\"regWrites\":[";
+      for (size_t j = 0; j < step.reg_writes.size(); ++j) {
+        if (j > 0) json += ",";
+        json += "{\"index\":";
+        json += std::to_string(step.reg_writes[j].index);
+        json += ",\"value\":\"";
+        json += json_escape(step.reg_writes[j].value);
+        json += "\"}";
+      }
+      json += "]";
+    }
+
+    // Upvalue metadata
+    if (step.upvalue_index >= 0) {
+      json += ",\"upvalueIndex\":";
+      json += std::to_string(step.upvalue_index);
+    }
+    if (!step.upvalue_var_name.empty()) {
+      json += ",\"upvalueVarName\":\"";
+      json += json_escape(step.upvalue_var_name);
+      json += "\"";
+    }
+    if (step.type == yatsi::VMStep::Type::ReadUpvalue ||
+        step.type == yatsi::VMStep::Type::WriteUpvalue ||
+        step.type == yatsi::VMStep::Type::CaptureUpvalue ||
+        step.type == yatsi::VMStep::Type::CloseUpvalue) {
+      json += ",\"upvalueIsOpen\":";
+      json += step.upvalue_is_open ? "true" : "false";
+    }
+    if (!step.upvalue_value.empty()) {
+      json += ",\"upvalueValue\":\"";
+      json += json_escape(step.upvalue_value);
+      json += "\"";
+    }
+    if (step.closure_func_index >= 0) {
+      json += ",\"closureFuncIndex\":";
+      json += std::to_string(step.closure_func_index);
+    }
+    if (step.upvalue_count >= 0) {
+      json += ",\"upvalueCount\":";
+      json += std::to_string(step.upvalue_count);
+    }
+
+    json += "}";
+  }
+  json += "]";
+
+  // Output
+  json += ",\"output\":\"";
+  json += json_escape(captured.str());
+  json += "\"";
+
+  // Error
+  if (result == yatsi::InterpretResult::RuntimeError) {
+    json += ",\"error\":\"Runtime error\"";
+  } else {
+    json += ",\"error\":null";
+  }
+
+  json += "}";
+  return json;
+  } catch (const std::exception& e) {
+    return "{\"error\":\"" + json_escape(e.what()) + "\",\"steps\":[],\"program\":null,\"output\":\"\"}";
+  } catch (...) {
+    return "{\"error\":\"unknown exception\",\"steps\":[],\"program\":null,\"output\":\"\"}";
   }
 }
 
@@ -463,4 +796,5 @@ EMSCRIPTEN_BINDINGS(yatsi_playground) {
   emscripten::function("tokenize_traced", &tokenize_traced);
   emscripten::function("parse_traced", &parse_traced);
   emscripten::function("compile_traced", &compile_traced);
+  emscripten::function("execute_traced", &execute_traced);
 }

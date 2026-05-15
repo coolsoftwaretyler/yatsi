@@ -4,6 +4,7 @@
 #include "compiler/bytecode.h"
 #include "runtime/gc.h"
 #include "vm/call_frame.h"
+#include "vm/vm_step.h"
 
 #include <array>
 #include <iostream>
@@ -26,6 +27,9 @@ public:
   VM(GarbageCollector &gc, std::ostream &out);
 
   InterpretResult execute(BytecodeFunction &func);
+
+  // Enable VM step tracing — must be called before execute()
+  void enable_tracing(std::vector<VMStep> &trace);
 
   // Read a register value (for testing/debugging)
   const Value &get_register(uint8_t index) const;
@@ -52,6 +56,9 @@ private:
   // Open upvalue linked list
   Upvalue *open_upvalues_ = nullptr;
 
+  // Tracing
+  std::vector<VMStep> *trace_ = nullptr;
+
   // Access a register relative to the current frame's base
   Value &reg(uint8_t index);
 
@@ -61,6 +68,10 @@ private:
   // Upvalue helpers
   Upvalue *capture_upvalue(uint16_t abs_reg);
   void close_upvalues(uint16_t from_reg);
+
+  // Tracing helpers
+  VMStep make_step(VMStep::Type type, const Instruction &instr);
+  void record_reg_write(VMStep &step, uint8_t reg_idx);
 
   // Mark all GC roots reachable from the VM
   void mark_roots();

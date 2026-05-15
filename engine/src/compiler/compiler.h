@@ -19,6 +19,15 @@ struct CompilerStep {
     PatchJump,
     PushLoop,
     PopLoop,
+    EnterFunction,
+    ExitFunction,
+    ResolveUpvalue,
+    MarkCaptured,
+    AddUpvalue,
+    ResolveGlobal,
+    ResolveLocal,
+    ResolveLocalNotFound,
+    UpvalueDedup,
   };
   Type type;
   size_t depth = 0;
@@ -30,6 +39,12 @@ struct CompilerStep {
   int patch_target = -1;
   int source_line = -1;
   int source_column = -1;
+  std::string function_name;
+  std::string variable_name;
+  int upvalue_index = -1;
+  bool is_local_upvalue = false;
+  int param_count = -1;
+  int upvalue_count = -1;
 };
 
 struct LoopContext {

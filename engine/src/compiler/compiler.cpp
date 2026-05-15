@@ -112,8 +112,25 @@ void Compiler::end_scope() {
 int Compiler::resolve_local(const std::string &name) {
   for (int i = static_cast<int>(locals_.size()) - 1; i >= 0; --i) {
     if (locals_[i].name == name) {
+      if (trace_) {
+        CompilerStep step;
+        step.type = CompilerStep::Type::ResolveLocal;
+        step.variable_name = name;
+        step.register_id = locals_[i].reg;
+        step.function_name = current_function_->name;
+        step.description = "resolve_local('" + name + "') -> R" + std::to_string(locals_[i].reg);
+        trace_step(step);
+      }
       return locals_[i].reg;
     }
+  }
+  if (trace_) {
+    CompilerStep step;
+    step.type = CompilerStep::Type::ResolveLocalNotFound;
+    step.variable_name = name;
+    step.function_name = current_function_->name;
+    step.description = "resolve_local('" + name + "') -> not found";
+    trace_step(step);
   }
   return -1;
 }
@@ -122,11 +139,30 @@ int Compiler::add_upvalue(uint8_t index, bool is_local) {
   // Check if we already have this upvalue
   for (int i = 0; i < static_cast<int>(upvalues_.size()); ++i) {
     if (upvalues_[i].index == index && upvalues_[i].is_local == is_local) {
+      if (trace_) {
+        CompilerStep step;
+        step.type = CompilerStep::Type::UpvalueDedup;
+        step.upvalue_index = i;
+        step.is_local_upvalue = is_local;
+        step.function_name = current_function_->name;
+        step.description = "UV" + std::to_string(i) + " already exists, reusing";
+        trace_step(step);
+      }
       return i;
     }
   }
   upvalues_.push_back({index, is_local});
-  return static_cast<int>(upvalues_.size()) - 1;
+  int uv_idx = static_cast<int>(upvalues_.size()) - 1;
+  if (trace_) {
+    CompilerStep step;
+    step.type = CompilerStep::Type::AddUpvalue;
+    step.upvalue_index = uv_idx;
+    step.is_local_upvalue = is_local;
+    step.function_name = current_function_->name;
+    step.description = "UV" + std::to_string(uv_idx) + (is_local ? " (local)" : " (upvalue)");
+    trace_step(step);
+  }
+  return uv_idx;
 }
 
 int Compiler::resolve_upvalue(const std::string &name) {
@@ -137,7 +173,27 @@ int Compiler::resolve_upvalue(const std::string &name) {
   for (int i = static_cast<int>(enclosing_->locals.size()) - 1; i >= 0; --i) {
     if (enclosing_->locals[i].name == name) {
       enclosing_->locals[i].is_captured = true;
-      return add_upvalue(enclosing_->locals[i].reg, true);
+      if (trace_) {
+        CompilerStep step;
+        step.type = CompilerStep::Type::MarkCaptured;
+        step.variable_name = name;
+        step.register_id = enclosing_->locals[i].reg;
+        step.function_name = enclosing_->function->name;
+        step.description = "mark '" + name + "' (R" + std::to_string(enclosing_->locals[i].reg) + ") as captured";
+        trace_step(step);
+      }
+      int result = add_upvalue(enclosing_->locals[i].reg, true);
+      if (trace_) {
+        CompilerStep step;
+        step.type = CompilerStep::Type::ResolveUpvalue;
+        step.variable_name = name;
+        step.upvalue_index = result;
+        step.is_local_upvalue = true;
+        step.function_name = enclosing_->function->name;
+        step.description = "resolve '" + name + "' -> UV" + std::to_string(result) + " (local from " + enclosing_->function->name + ")";
+        trace_step(step);
+      }
+      return result;
     }
   }
 
@@ -161,7 +217,18 @@ int Compiler::resolve_upvalue(const std::string &name) {
   enclosing_ = saved_enclosing;
 
   if (upvalue_idx >= 0) {
-    return add_upvalue(static_cast<uint8_t>(upvalue_idx), false);
+    int result = add_upvalue(static_cast<uint8_t>(upvalue_idx), false);
+    if (trace_) {
+      CompilerStep step;
+      step.type = CompilerStep::Type::ResolveUpvalue;
+      step.variable_name = name;
+      step.upvalue_index = result;
+      step.is_local_upvalue = false;
+      step.function_name = current_function_->name;
+      step.description = "resolve '" + name + "' -> UV" + std::to_string(result) + " (chained through " + enclosing_->function->name + ")";
+      trace_step(step);
+    }
+    return result;
   }
 
   return -1;
@@ -189,6 +256,7 @@ uint8_t Compiler::allocate_register() {
     CompilerStep step;
     step.type = CompilerStep::Type::AllocRegister;
     step.register_id = reg;
+    step.function_name = current_function_->name;
     step.description = "R" + std::to_string(reg);
     trace_step(step);
   }
@@ -541,6 +609,15 @@ void Compiler::compile_stmt(const Stmt &stmt) {
           upvalues_.clear();
           enclosing_ = &enclosing;
 
+          if (trace_) {
+            CompilerStep step;
+            step.type = CompilerStep::Type::EnterFunction;
+            step.function_name = child.name;
+            step.param_count = static_cast<int>(node.params.size());
+            step.description = "enter function '" + child.name + "' (" + std::to_string(node.params.size()) + " params)";
+            trace_step(step);
+          }
+
           // Register the parameters as locals in consecutive order her
           for (const auto &param : node.params) {
             uint8_t reg = allocate_register();
@@ -569,6 +646,15 @@ void Compiler::compile_stmt(const Stmt &stmt) {
           upvalues_ = std::move(enclosing.upvalues);
           scope_depth_ = enclosing.scope_depth;
           enclosing_ = enclosing.enclosing;
+
+          if (trace_) {
+            CompilerStep step;
+            step.type = CompilerStep::Type::ExitFunction;
+            step.function_name = child.name;
+            step.upvalue_count = static_cast<int>(child.upvalue_descs.size());
+            step.description = "exit function '" + child.name + "' (" + std::to_string(child.upvalue_descs.size()) + " upvalues)";
+            trace_step(step);
+          }
 
           // Add child to parent's functions vector
           uint16_t func_index =
@@ -676,6 +762,14 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
               emit_abc(OpCode::GetUpvalue, dest,
                        static_cast<uint8_t>(upvalue_idx), 0);
             } else {
+              if (trace_) {
+                CompilerStep step;
+                step.type = CompilerStep::Type::ResolveGlobal;
+                step.variable_name = node.name;
+                step.description = "resolve '" + node.name + "' -> global (not in locals" +
+                  std::string(enclosing_ ? " or upvalues" : ", no enclosing scope") + ")";
+                trace_step(step);
+              }
               dest = allocate_register();
               uint16_t name_idx = add_string_constant(node.name);
               emit_abx(OpCode::GetGlobal, dest, name_idx);
@@ -750,6 +844,14 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
                          static_cast<uint8_t>(upvalue_idx), 0);
                 dest = val_reg;
               } else {
+                if (trace_) {
+                  CompilerStep step;
+                  step.type = CompilerStep::Type::ResolveGlobal;
+                  step.variable_name = ident->name;
+                  step.description = "resolve '" + ident->name + "' -> global (not in locals" +
+                    std::string(enclosing_ ? " or upvalues" : ", no enclosing scope") + ")";
+                  trace_step(step);
+                }
                 uint8_t val_reg = compile_expr(*node.value);
                 uint16_t name_idx = add_string_constant(ident->name);
                 emit_abx(OpCode::SetGlobal, val_reg, name_idx);
@@ -870,6 +972,15 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           upvalues_.clear();
           enclosing_ = &enclosing;
 
+          if (trace_) {
+            CompilerStep step;
+            step.type = CompilerStep::Type::EnterFunction;
+            step.function_name = "<arrow>";
+            step.param_count = static_cast<int>(node.params.size());
+            step.description = "enter function '<arrow>' (" + std::to_string(node.params.size()) + " params)";
+            trace_step(step);
+          }
+
           // Register parameters as locals
           for (const auto &param : node.params) {
             uint8_t r = allocate_register();
@@ -902,6 +1013,15 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           upvalues_ = std::move(enclosing.upvalues);
           scope_depth_ = enclosing.scope_depth;
           enclosing_ = enclosing.enclosing;
+
+          if (trace_) {
+            CompilerStep step;
+            step.type = CompilerStep::Type::ExitFunction;
+            step.function_name = "<arrow>";
+            step.upvalue_count = static_cast<int>(child.upvalue_descs.size());
+            step.description = "exit function '<arrow>' (" + std::to_string(child.upvalue_descs.size()) + " upvalues)";
+            trace_step(step);
+          }
 
           // Add child to parent and emit Closure
           uint16_t func_index =

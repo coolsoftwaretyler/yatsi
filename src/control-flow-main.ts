@@ -233,10 +233,16 @@ function formatOperands(instr: CompilerInstruction): string {
     case 'Call':
       return 'R' + instr.a + ', R' + instr.b + ', R' + instr.c;
     case 'Move': case 'Neg': case 'NegNum': case 'BitNot': case 'Not': case 'TypeOf':
-    case 'GetUpvalue': case 'SetUpvalue': case 'NewArray': case 'Print':
+    case 'NewArray': case 'Print':
       return 'R' + instr.a + ', R' + instr.b;
-    case 'LoadConst': case 'GetGlobal': case 'SetGlobal': case 'Closure':
+    case 'GetUpvalue':
+      return 'R' + instr.a + ', UV' + instr.b;
+    case 'SetUpvalue':
+      return 'UV' + instr.b + ', R' + instr.a;
+    case 'LoadConst': case 'GetGlobal': case 'SetGlobal':
       return 'R' + instr.a + ', K' + instr.bx;
+    case 'Closure':
+      return 'R' + instr.a + ', F' + instr.bx;
     case 'JumpIfTrue': case 'JumpIfFalse':
       return 'R' + instr.a;
     case 'Jump':
