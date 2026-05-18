@@ -178,4 +178,4 @@ Type TypeChecker::check_expr(Expr &expr) {
   return result;
 }
 
-} // namespace twts
+} // namespace yatsi 
