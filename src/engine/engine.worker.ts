@@ -29,7 +29,14 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       return;
     }
     try {
-      const result = engine.evaluate(req.source!);
+      let result;
+      if (req.mode === 'typecheck') {
+        result = engine.typecheck(req.source!);
+      } else if (req.mode === 'dump-types') {
+        result = engine.dumpTypedAst(req.source!);
+      } else {
+        result = engine.evaluate(req.source!);
+      }
       const msg: WorkerResponse = {
         type: 'result',
         taskId: req.taskId,

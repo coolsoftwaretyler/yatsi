@@ -103,12 +103,18 @@ export class CustomApp {
     this.counts = { pass: 0, fail: 0, skip: 0, timeout: 0, total: 0 };
     this.resultsPanel.reset();
 
-    const assembled: AssembledTest[] = this.tests.map(t => ({
-      testPath: t.relativePath,
-      scenario: 'non-strict' as const,
-      source: t.source,
-      metadata: EMPTY_METADATA,
-    }));
+    const assembled: AssembledTest[] = this.tests.map(t => {
+      let mode: AssembledTest['mode'];
+      if (t.relativePath.startsWith('typecheck/')) mode = 'typecheck';
+      else if (t.relativePath.startsWith('dump-types/')) mode = 'dump-types';
+      return {
+        testPath: t.relativePath,
+        scenario: 'non-strict' as const,
+        source: t.source,
+        metadata: EMPTY_METADATA,
+        mode,
+      };
+    });
 
     this.counts.total = assembled.length;
     this.progress.reset(assembled.length);

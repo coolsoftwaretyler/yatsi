@@ -12,6 +12,7 @@ export interface WorkerRequest {
   type: 'evaluate' | 'reset';
   taskId?: string;
   source?: string;
+  mode?: 'evaluate' | 'typecheck' | 'dump-types';
 }
 
 export interface WorkerResponse {
