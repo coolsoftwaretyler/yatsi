@@ -26,6 +26,7 @@ export function loadEmbeddedTests(): CustomTestSuite {
 
     // relativePath: 'basic/hello.ts'
     const relativePath = srcPath.replace(/^\.\/tests\//, '');
+
     const name = relativePath.replace(/\.ts$/, '').split('/').pop()!;
 
     tests.push({ name, relativePath, source, expected });

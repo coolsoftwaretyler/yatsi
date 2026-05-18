@@ -20,6 +20,8 @@ set(YATSI_CORE_SOURCES
     src/runtime/js_string.cpp
     src/runtime/js_function.cpp
     src/typechecker/types.cpp
+    src/typechecker/type_env.cpp
+    src/typechecker/checker.cpp
     src/vm/vm.cpp
 )
 

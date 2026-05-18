@@ -1,6 +1,8 @@
 #include "yatsi.h"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
+#include "parser/ast_printer.h"
+#include "typechecker/checker.h"
 #include "compiler/compiler.h"
 #include "runtime/gc.h"
 #include "vm/vm.h"
@@ -56,4 +58,55 @@ EvalResult evaluate(const std::string& source) {
   } catch (...) {
     return EvalResult{false, "InternalError", "unknown exception", 2, ""};
   }
+}
+
+TypeCheckResult typecheck(const std::string& source) {
+  try {
+    yatsi::Lexer lexer(std::string(source), "<eval>");
+    auto tokens = lexer.tokenize();
+
+    yatsi::Parser parser(std::move(tokens), "<eval>");
+    auto program = parser.parse();
+
+    if (parser.has_errors()) {
+      std::vector<std::string> errors;
+      for (const auto& err : parser.errors()) {
+        errors.push_back(err);
+      }
+      return TypeCheckResult{false, errors};
+    }
+
+    yatsi::TypeChecker checker;
+    checker.check(program);
+
+    return TypeCheckResult{true, checker.warnings()};
+  } catch (const std::exception& e) {
+    return TypeCheckResult{false, {std::string("InternalError: ") + e.what()}};
+  } catch (...) {
+    return TypeCheckResult{false, {"InternalError: unknown exception"}};
+  }
+}
+
+std::string dump_typed_ast(const std::string& source) {
+  yatsi::Lexer lexer(std::string(source), "<eval>");
+  auto tokens = lexer.tokenize();
+
+  yatsi::Parser parser(std::move(tokens), "<eval>");
+  auto program = parser.parse();
+
+  if (parser.has_errors()) {
+    std::string combined;
+    for (const auto& err : parser.errors()) {
+      if (!combined.empty()) combined += "\n";
+      combined += err;
+    }
+    return combined;
+  }
+
+  yatsi::TypeChecker checker;
+  checker.check(program);
+
+  std::ostringstream out;
+  yatsi::print_typed_ast(program, out);
+  return out.str();
 }

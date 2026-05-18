@@ -37,6 +37,7 @@ export interface AssembledTest {
   scenario: TestScenario;
   source: string;
   metadata: TestMetadata;
+  mode?: 'evaluate' | 'typecheck' | 'dump-types';
 }
 
 export interface TestSuiteBundle {

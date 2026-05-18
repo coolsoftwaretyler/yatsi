@@ -1,0 +1,1 @@
+let b: boolean = "true";

@@ -199,6 +199,7 @@ export class TestExecutor {
       type: 'evaluate',
       taskId,
       source: test.source,
+      mode: test.mode,
     });
   }
 

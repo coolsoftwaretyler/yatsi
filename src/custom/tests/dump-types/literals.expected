@@ -1,0 +1,11 @@
+Program
+  ExpressionStmt
+    NumberLiteral(42) :: number
+  ExpressionStmt
+    StringLiteral("hello") :: string
+  ExpressionStmt
+    BooleanLiteral(true) :: boolean
+  ExpressionStmt
+    NullLiteral :: null
+  ExpressionStmt
+    UndefinedLiteral :: undefined

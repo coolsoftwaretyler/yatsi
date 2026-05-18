@@ -1,0 +1,9 @@
+Program
+  VarDeclaration(Let x)
+    NumberLiteral(100) :: number
+  VarDeclaration(Let s)
+    StringLiteral("inferred") :: string
+  ExpressionStmt
+    Identifier(x) :: number
+  ExpressionStmt
+    Identifier(s) :: string

@@ -1,0 +1,11 @@
+Program
+  VarDeclaration(Let a: number)
+    NumberLiteral(1) :: number
+  VarDeclaration(Let b: string)
+    StringLiteral("two") :: string
+  VarDeclaration(Let c: boolean)
+    BooleanLiteral(true) :: boolean
+  VarDeclaration(Let d)
+    NullLiteral :: null
+  VarDeclaration(Let e)
+    UndefinedLiteral :: undefined

@@ -1,0 +1,9 @@
+Program
+  VarDeclaration(Let x: number)
+    NumberLiteral(10) :: number
+  VarDeclaration(Let s: string)
+    StringLiteral("hi") :: string
+  ExpressionStmt
+    Identifier(x) :: number
+  ExpressionStmt
+    Identifier(s) :: string

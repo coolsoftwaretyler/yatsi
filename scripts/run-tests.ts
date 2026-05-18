@@ -75,10 +75,19 @@ function main() {
   for (const test of tests) {
     const expected = readFileSync(test.expectedPath, "utf-8").trim();
 
+    // Build CLI args based on test category
+    const args: string[] = [];
+    if (test.name.startsWith("typecheck/")) {
+      args.push("--typecheck");
+    } else if (test.name.startsWith("dump-types/")) {
+      args.push("--dump-types");
+    }
+    args.push(test.sourcePath);
+
     let actual: string;
     let stderr = "";
     try {
-      actual = execFileSync(cliBin, [test.sourcePath], {
+      actual = execFileSync(cliBin, args, {
         encoding: "utf-8",
         timeout: 10_000,
       }).trim();

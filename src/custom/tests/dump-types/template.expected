@@ -1,0 +1,8 @@
+Program
+  VarDeclaration(Let name: string)
+    StringLiteral("world") :: string
+  ExpressionStmt
+    TemplateLiteral :: string
+      quasi: "hello "
+      Identifier(name) :: string
+      quasi: ""

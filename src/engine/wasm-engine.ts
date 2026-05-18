@@ -10,6 +10,8 @@ interface WasmEvalResult {
 
 interface YatsiModule {
   evaluate(source: string): WasmEvalResult;
+  typecheck_as_eval(source: string): WasmEvalResult;
+  dump_typed_ast_as_eval(source: string): WasmEvalResult;
   run_pipeline(source: string): string;
   tokenize_traced(source: string): string;
   parse_traced(source: string): string;
@@ -37,6 +39,28 @@ export class YatsiEngine {
 
   evaluate(source: string): EvalResult {
     const raw = this.module.evaluate(source);
+    return {
+      success: raw.success,
+      errorType: raw.error_type,
+      errorMessage: raw.error_message,
+      phase: PHASE_MAP[raw.phase] ?? 'runtime',
+      consoleOutput: raw.console_output,
+    };
+  }
+
+  typecheck(source: string): EvalResult {
+    const raw = this.module.typecheck_as_eval(source);
+    return {
+      success: raw.success,
+      errorType: raw.error_type,
+      errorMessage: raw.error_message,
+      phase: PHASE_MAP[raw.phase] ?? 'runtime',
+      consoleOutput: raw.console_output,
+    };
+  }
+
+  dumpTypedAst(source: string): EvalResult {
+    const raw = this.module.dump_typed_ast_as_eval(source);
     return {
       success: raw.success,
       errorType: raw.error_type,

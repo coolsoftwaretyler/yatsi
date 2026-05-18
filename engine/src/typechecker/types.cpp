@@ -41,4 +41,4 @@ std::string type_to_string(const Type& t) {
       static_cast<const Type::variant&>(t));
 }
 
-} // namespace
+} // namespace yatsi
