@@ -1,12 +1,14 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
 
 #include "common/source_location.h"
 #include "lexer/token.h"
+#include "typechecker/types.h"
 
 namespace yatsi {
 
@@ -171,6 +173,7 @@ struct Expr : std::variant<NumberLiteral, StringLiteral, BooleanLiteral,
                            ArrowFunction, ConditionalExpr, TemplateLiteral> {
   using variant::variant;
   SourceLocation location;
+  std::optional<Type> resolved_type;
 };
 
 struct Stmt : std::variant<ExpressionStmt, VarDeclaration, BlockStmt, IfStmt,
