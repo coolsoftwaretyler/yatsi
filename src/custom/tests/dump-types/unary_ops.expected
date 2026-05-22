@@ -1,0 +1,10 @@
+Program
+  ExpressionStmt
+    UnaryExpr(Minus prefix) :: number
+      NumberLiteral(42) :: number
+  ExpressionStmt
+    UnaryExpr(Bang prefix) :: boolean
+      BooleanLiteral(true) :: boolean
+  ExpressionStmt
+    UnaryExpr(TypeOf prefix) :: string
+      StringLiteral("hello") :: string

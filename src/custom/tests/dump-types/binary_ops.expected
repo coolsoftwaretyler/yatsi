@@ -1,0 +1,21 @@
+Program
+  ExpressionStmt
+    BinaryExpr(Plus) :: number
+      NumberLiteral(10) :: number
+      NumberLiteral(20) :: number
+  ExpressionStmt
+    BinaryExpr(Plus) :: string
+      StringLiteral("a") :: string
+      StringLiteral("b") :: string
+  ExpressionStmt
+    BinaryExpr(Minus) :: number
+      NumberLiteral(5) :: number
+      NumberLiteral(3) :: number
+  ExpressionStmt
+    BinaryExpr(Less) :: boolean
+      NumberLiteral(5) :: number
+      NumberLiteral(10) :: number
+  ExpressionStmt
+    BinaryExpr(AmpersandAmpersand) :: boolean
+      BooleanLiteral(true) :: boolean
+      BooleanLiteral(false) :: boolean

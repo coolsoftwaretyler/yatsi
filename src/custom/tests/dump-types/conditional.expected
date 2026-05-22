@@ -1,0 +1,25 @@
+Program
+  ExpressionStmt
+    ConditionalExpr :: number
+      condition:
+        BooleanLiteral(true) :: boolean
+      consequent:
+        NumberLiteral(1) :: number
+      alternate:
+        NumberLiteral(2) :: number
+  ExpressionStmt
+    ConditionalExpr :: string
+      condition:
+        BooleanLiteral(true) :: boolean
+      consequent:
+        StringLiteral("a") :: string
+      alternate:
+        StringLiteral("b") :: string
+  ExpressionStmt
+    ConditionalExpr :: number | string
+      condition:
+        BooleanLiteral(true) :: boolean
+      consequent:
+        NumberLiteral(1) :: number
+      alternate:
+        StringLiteral("b") :: string
