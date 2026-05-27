@@ -351,10 +351,6 @@ Type TypeChecker::check_expr(Expr &expr) {
           for (auto &elem : node.elements) {
             check_expr(*elem);
           }
-        } else if constexpr (std::is_same_v<T, ArrayLiteral>) {
-          for (auto &elem : node.elements) {
-            check_expr(*elem);
-          }
         } else if constexpr (std::is_same_v<T, ObjectLiteral>) {
           for (auto &prop : node.properties) {
             check_expr(*prop.value);
