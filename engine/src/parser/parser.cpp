@@ -893,7 +893,14 @@ StmtPtr Parser::parse_function_declaration() {
 TypeAnnotationPtr Parser::parse_type_annotation() {
   TraceRule tr(trace_, &trace_depth_, "parse_type_annotation", pos_, "at " + tok_desc(current()));
   auto loc = current().location;
-  Token name = expect(TokenKind::Identifier, "Expected type name");
+  // Accept identifiers and keywords that are also valid type names
+  Token name;
+  if (check(TokenKind::Identifier) || check(TokenKind::Void) ||
+      check(TokenKind::Null) || check(TokenKind::Undefined)) {
+    name = advance();
+  } else {
+    name = expect(TokenKind::Identifier, "Expected type name");
+  }
   auto ann = std::make_unique<TypeAnnotation>();
   ann->name = name.lexeme;
   ann->location = loc;

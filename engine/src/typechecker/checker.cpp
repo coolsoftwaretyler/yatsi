@@ -154,6 +154,14 @@ void TypeChecker::check_stmt(Stmt &stmt) {
                        "' is not assignable to type '" +
                        type_to_string(*current_return_type_) + "'.");
             }
+          } else {
+            // bare `return;` has implicit type void
+            if (current_return_type_ && !is_any_type(*current_return_type_) &&
+                !is_void_type(*current_return_type_)) {
+              warn(stmt.location,
+                   "Type 'void' is not assignable to type '" +
+                       type_to_string(*current_return_type_) + "'.");
+            }
           }
 
         } else if constexpr (std::is_same_v<T, BreakStmt>) {
