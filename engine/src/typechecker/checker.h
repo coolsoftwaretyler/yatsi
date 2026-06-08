@@ -27,6 +27,11 @@ private:
 
   void warn(const SourceLocation &loc, const std::string &message);
 
+  Type build_function_type(const std::vector<Parameter> &params,
+                           const TypeAnnotationPtr &return_type);
+
+  Type *current_return_type_ = nullptr;
+
   std::vector<std::string> warnings_;
 };
 

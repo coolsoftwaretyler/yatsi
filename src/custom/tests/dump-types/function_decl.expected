@@ -1,0 +1,7 @@
+Program
+  FunctionDecl(add(a: number, b: number): number)
+    BlockStmt
+      ReturnStmt
+        BinaryExpr(Plus) :: number
+          Identifier(a) :: number
+          Identifier(b) :: number
