@@ -16,9 +16,7 @@ VM::VM(GarbageCollector &gc, std::ostream &out) : gc_(gc), out_(out) {
   registers_.fill(Value::undefined());
 }
 
-void VM::enable_tracing(std::vector<VMStep> &trace) {
-  trace_ = &trace;
-}
+void VM::enable_tracing(std::vector<VMStep> &trace) { trace_ = &trace; }
 
 VMStep VM::make_step(VMStep::Type type, const Instruction &instr) {
   VMStep step;
@@ -152,8 +150,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = R[" +
                            std::to_string(instr.b()) + "] + R[" +
-                           std::to_string(instr.c()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -167,8 +165,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = R[" +
                            std::to_string(instr.b()) + "] - R[" +
-                           std::to_string(instr.c()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -182,8 +180,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = R[" +
                            std::to_string(instr.b()) + "] * R[" +
-                           std::to_string(instr.c()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -197,8 +195,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = R[" +
                            std::to_string(instr.b()) + "] / R[" +
-                           std::to_string(instr.c()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -212,8 +210,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = R[" +
                            std::to_string(instr.b()) + "] % R[" +
-                           std::to_string(instr.c()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -227,8 +225,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = R[" +
                            std::to_string(instr.b()) + "] ** R[" +
-                           std::to_string(instr.c()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -240,13 +238,47 @@ InterpretResult VM::execute(BytecodeFunction &func) {
       if (trace_) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = -R[" +
-                           std::to_string(instr.b()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.b()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
       break;
     }
+
+    case OpCode::AddNum:
+      reg(instr.a()) = Value::number(reg(instr.b()).as_number() +
+                                     reg(instr.c()).as_number());
+      break;
+
+    case OpCode::SubNum:
+      reg(instr.a()) = Value::number(reg(instr.b()).as_number() -
+                                     reg(instr.c()).as_number());
+      break;
+
+    case OpCode::MulNum:
+      reg(instr.a()) = Value::number(reg(instr.b()).as_number() *
+                                     reg(instr.c()).as_number());
+      break;
+
+    case OpCode::DivNum:
+      reg(instr.a()) = Value::number(reg(instr.b()).as_number() /
+                                     reg(instr.c()).as_number());
+      break;
+
+    case OpCode::ModNum:
+      reg(instr.a()) = Value::number(
+          std::fmod(reg(instr.b()).as_number(), reg(instr.c()).as_number()));
+      break;
+
+    case OpCode::PowNum:
+      reg(instr.a()) = Value::number(
+          std::pow(reg(instr.b()).as_number(), reg(instr.c()).as_number()));
+      break;
+
+    case OpCode::NegNum:
+      reg(instr.a()) = Value::number(-reg(instr.b()).as_number());
+      break;
 
       // --- Bitwise ---
 
@@ -258,8 +290,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = R[" +
                            std::to_string(instr.b()) + "] & R[" +
-                           std::to_string(instr.c()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -274,8 +306,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = R[" +
                            std::to_string(instr.b()) + "] | R[" +
-                           std::to_string(instr.c()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -290,8 +322,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = R[" +
                            std::to_string(instr.b()) + "] ^ R[" +
-                           std::to_string(instr.c()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -304,8 +336,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
       if (trace_) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = ~R[" +
-                           std::to_string(instr.b()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.b()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -320,8 +352,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = R[" +
                            std::to_string(instr.b()) + "] << R[" +
-                           std::to_string(instr.c()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -336,8 +368,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = R[" +
                            std::to_string(instr.b()) + "] >> R[" +
-                           std::to_string(instr.c()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -352,8 +384,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = R[" +
                            std::to_string(instr.b()) + "] >>> R[" +
-                           std::to_string(instr.c()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -369,8 +401,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = (R[" +
                            std::to_string(instr.b()) + "] == R[" +
-                           std::to_string(instr.c()) + "]) = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "]) = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -384,8 +416,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = (R[" +
                            std::to_string(instr.b()) + "] != R[" +
-                           std::to_string(instr.c()) + "]) = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "]) = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -399,8 +431,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = (R[" +
                            std::to_string(instr.b()) + "] === R[" +
-                           std::to_string(instr.c()) + "]) = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "]) = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -414,8 +446,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = (R[" +
                            std::to_string(instr.b()) + "] !== R[" +
-                           std::to_string(instr.c()) + "]) = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "]) = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -429,8 +461,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = (R[" +
                            std::to_string(instr.b()) + "] < R[" +
-                           std::to_string(instr.c()) + "]) = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "]) = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -444,8 +476,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = (R[" +
                            std::to_string(instr.b()) + "] <= R[" +
-                           std::to_string(instr.c()) + "]) = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "]) = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -459,8 +491,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = (R[" +
                            std::to_string(instr.b()) + "] > R[" +
-                           std::to_string(instr.c()) + "]) = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "]) = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -474,8 +506,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = (R[" +
                            std::to_string(instr.b()) + "] >= R[" +
-                           std::to_string(instr.c()) + "]) = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.c()) +
+                           "]) = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -489,8 +521,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
       if (trace_) {
         auto step = make_step(VMStep::Type::Execute, instr);
         step.description = "R[" + std::to_string(instr.a()) + "] = !R[" +
-                           std::to_string(instr.b()) + "] = " +
-                           reg(instr.a()).to_debug_string();
+                           std::to_string(instr.b()) +
+                           "] = " + reg(instr.a()).to_debug_string();
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
       }
@@ -560,8 +592,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
           // Walk compiler trace if available — for now use index
         }
         step.description = "R[" + std::to_string(instr.a()) + "] = upvalues[" +
-                           std::to_string(uv_idx) + "] = " +
-                           step.upvalue_value +
+                           std::to_string(uv_idx) +
+                           "] = " + step.upvalue_value +
                            (uv->is_open ? " (open)" : " (closed)");
         record_reg_write(step, instr.a());
         trace_->push_back(std::move(step));
@@ -596,15 +628,16 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         int count = 0;
         for (auto *uv = open_upvalues_; uv && uv->register_index >= from_reg;
              uv = uv->next_open) {
-          if (count > 0) closed_list += ", ";
+          if (count > 0)
+            closed_list += ", ";
           closed_list += "reg" + std::to_string(uv->register_index) + "=" +
                          uv->location->to_debug_string();
           count++;
         }
         step.description = "Close upvalues from R[" +
                            std::to_string(instr.a()) + "] (abs " +
-                           std::to_string(from_reg) + "): " +
-                           (count > 0 ? closed_list : "none");
+                           std::to_string(from_reg) +
+                           "): " + (count > 0 ? closed_list : "none");
         close_upvalues(from_reg);
         trace_->push_back(std::move(step));
       } else {
@@ -663,16 +696,15 @@ InterpretResult VM::execute(BytecodeFunction &func) {
           uv_step.upvalue_value = captured_uv->location->to_debug_string();
 
           if (desc.is_local) {
-            uv_step.description = "  UV[" + std::to_string(i) +
-                                  "] captures local R[" +
-                                  std::to_string(desc.index) + "] (abs " +
-                                  std::to_string(cf.base_register + desc.index) +
-                                  ") = " + uv_step.upvalue_value;
+            uv_step.description =
+                "  UV[" + std::to_string(i) + "] captures local R[" +
+                std::to_string(desc.index) + "] (abs " +
+                std::to_string(cf.base_register + desc.index) +
+                ") = " + uv_step.upvalue_value;
           } else {
-            uv_step.description = "  UV[" + std::to_string(i) +
-                                  "] chains from enclosing UV[" +
-                                  std::to_string(desc.index) + "] = " +
-                                  uv_step.upvalue_value;
+            uv_step.description =
+                "  UV[" + std::to_string(i) + "] chains from enclosing UV[" +
+                std::to_string(desc.index) + "] = " + uv_step.upvalue_value;
           }
           trace_->push_back(std::move(uv_step));
         }
@@ -699,9 +731,9 @@ InterpretResult VM::execute(BytecodeFunction &func) {
 
       if (trace_) {
         auto step = make_step(VMStep::Type::Call, instr);
-        step.description = "Call " + fn->prototype()->name + "(" +
-                           std::to_string(instr.b()) + " args), base=" +
-                           std::to_string(new_frame.base_register);
+        step.description =
+            "Call " + fn->prototype()->name + "(" + std::to_string(instr.b()) +
+            " args), base=" + std::to_string(new_frame.base_register);
         trace_->push_back(std::move(step));
       }
 
@@ -724,11 +756,12 @@ InterpretResult VM::execute(BytecodeFunction &func) {
         auto step = make_step(VMStep::Type::Execute, instr);
         std::string vals;
         for (uint8_t i = 0; i < count; ++i) {
-          if (i > 0) vals += ", ";
+          if (i > 0)
+            vals += ", ";
           vals += reg(start + i).to_debug_string();
         }
-        step.description = "Print " + std::to_string(count) +
-                           " value(s): " + vals;
+        step.description =
+            "Print " + std::to_string(count) + " value(s): " + vals;
         trace_->push_back(std::move(step));
       }
       break;
@@ -751,8 +784,8 @@ InterpretResult VM::execute(BytecodeFunction &func) {
       bool taken = reg(instr.a()).is_truthy();
       if (trace_) {
         auto step = make_step(VMStep::Type::Execute, instr);
-        step.description = "JumpIfTrue R[" + std::to_string(instr.a()) +
-                           "] (" + reg(instr.a()).to_debug_string() + ") " +
+        step.description = "JumpIfTrue R[" + std::to_string(instr.a()) + "] (" +
+                           reg(instr.a()).to_debug_string() + ") " +
                            (taken ? "-> taken" : "-> not taken");
         trace_->push_back(std::move(step));
       }

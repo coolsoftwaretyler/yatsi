@@ -118,7 +118,8 @@ int Compiler::resolve_local(const std::string &name) {
         step.variable_name = name;
         step.register_id = locals_[i].reg;
         step.function_name = current_function_->name;
-        step.description = "resolve_local('" + name + "') -> R" + std::to_string(locals_[i].reg);
+        step.description = "resolve_local('" + name + "') -> R" +
+                           std::to_string(locals_[i].reg);
         trace_step(step);
       }
       return locals_[i].reg;
@@ -145,7 +146,8 @@ int Compiler::add_upvalue(uint8_t index, bool is_local) {
         step.upvalue_index = i;
         step.is_local_upvalue = is_local;
         step.function_name = current_function_->name;
-        step.description = "UV" + std::to_string(i) + " already exists, reusing";
+        step.description =
+            "UV" + std::to_string(i) + " already exists, reusing";
         trace_step(step);
       }
       return i;
@@ -159,7 +161,8 @@ int Compiler::add_upvalue(uint8_t index, bool is_local) {
     step.upvalue_index = uv_idx;
     step.is_local_upvalue = is_local;
     step.function_name = current_function_->name;
-    step.description = "UV" + std::to_string(uv_idx) + (is_local ? " (local)" : " (upvalue)");
+    step.description =
+        "UV" + std::to_string(uv_idx) + (is_local ? " (local)" : " (upvalue)");
     trace_step(step);
   }
   return uv_idx;
@@ -179,7 +182,9 @@ int Compiler::resolve_upvalue(const std::string &name) {
         step.variable_name = name;
         step.register_id = enclosing_->locals[i].reg;
         step.function_name = enclosing_->function->name;
-        step.description = "mark '" + name + "' (R" + std::to_string(enclosing_->locals[i].reg) + ") as captured";
+        step.description = "mark '" + name + "' (R" +
+                           std::to_string(enclosing_->locals[i].reg) +
+                           ") as captured";
         trace_step(step);
       }
       int result = add_upvalue(enclosing_->locals[i].reg, true);
@@ -190,7 +195,9 @@ int Compiler::resolve_upvalue(const std::string &name) {
         step.upvalue_index = result;
         step.is_local_upvalue = true;
         step.function_name = enclosing_->function->name;
-        step.description = "resolve '" + name + "' -> UV" + std::to_string(result) + " (local from " + enclosing_->function->name + ")";
+        step.description = "resolve '" + name + "' -> UV" +
+                           std::to_string(result) + " (local from " +
+                           enclosing_->function->name + ")";
         trace_step(step);
       }
       return result;
@@ -225,7 +232,9 @@ int Compiler::resolve_upvalue(const std::string &name) {
       step.upvalue_index = result;
       step.is_local_upvalue = false;
       step.function_name = current_function_->name;
-      step.description = "resolve '" + name + "' -> UV" + std::to_string(result) + " (chained through " + enclosing_->function->name + ")";
+      step.description = "resolve '" + name + "' -> UV" +
+                         std::to_string(result) + " (chained through " +
+                         enclosing_->function->name + ")";
       trace_step(step);
     }
     return result;
@@ -358,6 +367,10 @@ void Compiler::patch_jump_to(size_t index, size_t target) {
 
 size_t Compiler::current_offset() { return current_function_->code.size(); }
 
+static bool is_known_number(const Expr &expr) {
+  return expr.resolved_type.has_value() && is_number_type(*expr.resolved_type);
+}
+
 // --- TokenKind to OpCode mapping ---
 
 static OpCode binary_op(TokenKind kind) {
@@ -404,6 +417,25 @@ static OpCode binary_op(TokenKind kind) {
     return OpCode::GreaterEqual;
   default:
     return OpCode::Add; // unreachable for valid AST
+  }
+}
+
+static OpCode binary_op_num(TokenKind kind) {
+  switch (kind) {
+  case TokenKind::Plus:
+    return OpCode::AddNum;
+  case TokenKind::Minus:
+    return OpCode::SubNum;
+  case TokenKind::Star:
+    return OpCode::MulNum;
+  case TokenKind::Slash:
+    return OpCode::DivNum;
+  case TokenKind::Percent:
+    return OpCode::ModNum;
+  case TokenKind::StarStar:
+    return OpCode::PowNum;
+  default:
+    return binary_op(kind);
   }
 }
 
@@ -614,7 +646,8 @@ void Compiler::compile_stmt(const Stmt &stmt) {
             step.type = CompilerStep::Type::EnterFunction;
             step.function_name = child.name;
             step.param_count = static_cast<int>(node.params.size());
-            step.description = "enter function '" + child.name + "' (" + std::to_string(node.params.size()) + " params)";
+            step.description = "enter function '" + child.name + "' (" +
+                               std::to_string(node.params.size()) + " params)";
             trace_step(step);
           }
 
@@ -652,7 +685,9 @@ void Compiler::compile_stmt(const Stmt &stmt) {
             step.type = CompilerStep::Type::ExitFunction;
             step.function_name = child.name;
             step.upvalue_count = static_cast<int>(child.upvalue_descs.size());
-            step.description = "exit function '" + child.name + "' (" + std::to_string(child.upvalue_descs.size()) + " upvalues)";
+            step.description = "exit function '" + child.name + "' (" +
+                               std::to_string(child.upvalue_descs.size()) +
+                               " upvalues)";
             trace_step(step);
           }
 
@@ -730,32 +765,37 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           // When resolving an identifier, we first attempt to find it in our
           // locals
           int local_reg = resolve_local(node.name);
-          // If there's a local register for this name, we return that as the destination
+          // If there's a local register for this name, we return that as the
+          // destination
           if (local_reg >= 0) {
             dest = static_cast<uint8_t>(local_reg);
           } else {
-            // If we can't find the name in locals, we start walking our upvalues.
-            // Upvalues are what makes a "closure" - gives us the ability to enclose around
-            // variables from outer scope.
+            // If we can't find the name in locals, we start walking our
+            // upvalues. Upvalues are what makes a "closure" - gives us the
+            // ability to enclose around variables from outer scope.
             //
-            // resolve_upvalue will return -1 if there is no enclosing scope, 
+            // resolve_upvalue will return -1 if there is no enclosing scope,
             // or if we cannot find any upvalues through the chain
             //
-            // The way we actually check the upvalues is by searching all of the enclosing_.locals
-            // to see if any of them have the same name as this identifier we're compiling.
-            // If we find one, we mark its representative Local struct is_captured value as true,
-            // and then we push the index of that local register into the upvalues_ vector.
-            // In this case (resolved in the *locals* of the enclosing function), we mark it as is_local
+            // The way we actually check the upvalues is by searching all of the
+            // enclosing_.locals to see if any of them have the same name as
+            // this identifier we're compiling. If we find one, we mark its
+            // representative Local struct is_captured value as true, and then
+            // we push the index of that local register into the upvalues_
+            // vector. In this case (resolved in the *locals* of the enclosing
+            // function), we mark it as is_local
             //
             // But if we do not find it in the enclosing locals,
-            // we then recursively check further up into other enclosing functions.
-            // If we find a match there, we add an upvalue, but mark it as is_local false
+            // we then recursively check further up into other enclosing
+            // functions. If we find a match there, we add an upvalue, but mark
+            // it as is_local false
             //
-            // If we found an upvalue in locals or enclosuers, we emit a GetUpvalue instruction,
-            // pointing to the index
+            // If we found an upvalue in locals or enclosuers, we emit a
+            // GetUpvalue instruction, pointing to the index
             //
-            // If none of that hits and we end up with `-1`, then we emit a GetGlobal instruction,
-            // because that's our global fallback for resolving values.
+            // If none of that hits and we end up with `-1`, then we emit a
+            // GetGlobal instruction, because that's our global fallback for
+            // resolving values.
             int upvalue_idx = resolve_upvalue(node.name);
             if (upvalue_idx >= 0) {
               dest = allocate_register();
@@ -766,8 +806,11 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
                 CompilerStep step;
                 step.type = CompilerStep::Type::ResolveGlobal;
                 step.variable_name = node.name;
-                step.description = "resolve '" + node.name + "' -> global (not in locals" +
-                  std::string(enclosing_ ? " or upvalues" : ", no enclosing scope") + ")";
+                step.description =
+                    "resolve '" + node.name + "' -> global (not in locals" +
+                    std::string(enclosing_ ? " or upvalues"
+                                           : ", no enclosing scope") +
+                    ")";
                 trace_step(step);
               }
               dest = allocate_register();
@@ -802,7 +845,11 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
             uint8_t left = compile_expr(*node.left);
             uint8_t right = compile_expr(*node.right);
             dest = allocate_register();
-            emit_abc(binary_op(node.op), dest, left, right);
+            if (is_known_number(*node.left) && is_known_number(*node.right)) {
+              emit_abc(binary_op_num(node.op), dest, left, right);
+            } else {
+              emit_abc(binary_op(node.op), dest, left, right);
+            }
           }
 
         } else if constexpr (std::is_same_v<T, UnaryExpr>) {
@@ -812,7 +859,11 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           uint8_t operand = compile_expr(*node.operand);
           dest = allocate_register();
           if (node.op == TokenKind::Minus) {
-            emit_abc(OpCode::Neg, dest, operand, 0);
+            if (is_known_number(*node.operand)) {
+              emit_abc(OpCode::NegNum, dest, operand, 0);
+            } else {
+              emit_abc(OpCode::Neg, dest, operand, 0);
+            }
           } else if (node.op == TokenKind::Bang) {
             emit_abc(OpCode::Not, dest, operand, 0);
           } else if (node.op == TokenKind::Tilde) {
@@ -848,8 +899,11 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
                   CompilerStep step;
                   step.type = CompilerStep::Type::ResolveGlobal;
                   step.variable_name = ident->name;
-                  step.description = "resolve '" + ident->name + "' -> global (not in locals" +
-                    std::string(enclosing_ ? " or upvalues" : ", no enclosing scope") + ")";
+                  step.description =
+                      "resolve '" + ident->name + "' -> global (not in locals" +
+                      std::string(enclosing_ ? " or upvalues"
+                                             : ", no enclosing scope") +
+                      ")";
                   trace_step(step);
                 }
                 uint8_t val_reg = compile_expr(*node.value);
@@ -977,7 +1031,8 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
             step.type = CompilerStep::Type::EnterFunction;
             step.function_name = "<arrow>";
             step.param_count = static_cast<int>(node.params.size());
-            step.description = "enter function '<arrow>' (" + std::to_string(node.params.size()) + " params)";
+            step.description = "enter function '<arrow>' (" +
+                               std::to_string(node.params.size()) + " params)";
             trace_step(step);
           }
 
@@ -1019,7 +1074,9 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
             step.type = CompilerStep::Type::ExitFunction;
             step.function_name = "<arrow>";
             step.upvalue_count = static_cast<int>(child.upvalue_descs.size());
-            step.description = "exit function '<arrow>' (" + std::to_string(child.upvalue_descs.size()) + " upvalues)";
+            step.description = "exit function '<arrow>' (" +
+                               std::to_string(child.upvalue_descs.size()) +
+                               " upvalues)";
             trace_step(step);
           }
 
