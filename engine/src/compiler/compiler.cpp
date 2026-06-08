@@ -845,7 +845,6 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
             uint8_t left = compile_expr(*node.left);
             uint8_t right = compile_expr(*node.right);
             dest = allocate_register();
-            emit_abc(binary_op(node.op), dest, left, right);
             if (is_known_number(*node.left) && is_known_number(*node.right)) {
               emit_abc(binary_op_num(node.op), dest, left, right);
             } else {
