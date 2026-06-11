@@ -1,0 +1,110 @@
+[
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/evaluate.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/evaluate.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/evaluate.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/evaluate.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/common/value.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/common/value.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/common/value.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/common/value.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/lexer/token.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/lexer/token.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/lexer/token.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/lexer/token.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/lexer/lexer.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/lexer/lexer.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/lexer/lexer.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/lexer/lexer.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/parser/parser.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/parser/parser.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/parser/parser.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/parser/parser.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/parser/ast_printer.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/parser/ast_printer.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/parser/ast_printer.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/parser/ast_printer.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/compiler/bytecode.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/compiler/bytecode.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/compiler/bytecode.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/compiler/bytecode.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/compiler/compiler.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/compiler/compiler.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/compiler/compiler.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/compiler/compiler.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/compiler/disassembler.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/compiler/disassembler.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/compiler/disassembler.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/compiler/disassembler.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/runtime/gc.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/runtime/gc.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/runtime/gc.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/runtime/gc.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/runtime/js_string.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/runtime/js_string.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/runtime/js_string.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/runtime/js_string.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/runtime/js_function.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/runtime/js_function.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/runtime/js_function.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/runtime/js_function.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/typechecker/types.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/typechecker/types.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/typechecker/types.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/typechecker/types.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/typechecker/type_env.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/typechecker/type_env.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/typechecker/type_env.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/typechecker/type_env.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/typechecker/checker.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/typechecker/checker.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/typechecker/checker.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/typechecker/checker.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/vm/vm.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/vm/vm.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/vm/vm.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/vm/vm.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/yatsi.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/yatsi.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/yatsi.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/yatsi.cpp.o"
+},
+{
+  "directory": "/Users/tylerwilliams/yatsi/engine/build-debug",
+  "command": "/opt/homebrew/Cellar/emscripten/5.0.7/libexec/em++  -I/Users/tylerwilliams/yatsi/engine/src -sASSERTIONS=2 -sSAFE_HEAP=1 -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/yatsi.dir/src/wasm_api.cpp.o -c /Users/tylerwilliams/yatsi/engine/src/wasm_api.cpp",
+  "file": "/Users/tylerwilliams/yatsi/engine/src/wasm_api.cpp",
+  "output": "CMakeFiles/yatsi.dir/src/wasm_api.cpp.o"
+}
+]

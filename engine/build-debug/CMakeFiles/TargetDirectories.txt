@@ -1,0 +1,3 @@
+/Users/tylerwilliams/yatsi/engine/build-debug/CMakeFiles/yatsi.dir
+/Users/tylerwilliams/yatsi/engine/build-debug/CMakeFiles/edit_cache.dir
+/Users/tylerwilliams/yatsi/engine/build-debug/CMakeFiles/rebuild_cache.dir

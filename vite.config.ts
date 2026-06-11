@@ -17,6 +17,7 @@ export default defineConfig({
         playground: resolve(__dirname, 'playground/index.html'),
         'control-flow-compilation': resolve(__dirname, 'control-flow-compilation/index.html'),
         closures: resolve(__dirname, 'closures/index.html'),
+        'type-explorer': resolve(__dirname, 'type-explorer/index.html'),
       },
     },
   },

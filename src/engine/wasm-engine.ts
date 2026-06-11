@@ -17,6 +17,7 @@ interface YatsiModule {
   parse_traced(source: string): string;
   compile_traced(source: string): string;
   execute_traced(source: string): string;
+  typecheck_traced(source: string): string;
 }
 
 type CreateYatsi = () => Promise<YatsiModule>;
@@ -88,6 +89,10 @@ export class YatsiEngine {
 
   executeTraced(source: string): string {
     return this.module.execute_traced(source);
+  }
+
+  typecheckTraced(source: string): string {
+    return this.module.typecheck_traced(source);
   }
 
   destroy(): void {
