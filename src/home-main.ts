@@ -33,6 +33,10 @@ function init(): void {
       el('h2', {}, 'Closures & Upvalues'),
       el('p', {}, 'Step through how closures capture variables via upvalues across nested function scopes.'),
     ),
+    el('a', { className: 'home-card', href: './type-explorer/' },
+      el('h2', {}, 'Type Explorer'),
+      el('p', {}, 'Step through the type checker to see how types propagate through your code.'),
+    ),
   );
 
   root.appendChild(header);

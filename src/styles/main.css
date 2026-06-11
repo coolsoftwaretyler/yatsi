@@ -2693,3 +2693,535 @@ body {
 .cl-interleaved-compiling {
   border-left-color: rgba(74, 158, 255, 0.5);
 }
+
+/* ========================================
+   Type Explorer
+   ======================================== */
+
+.type-explorer {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 120px);
+}
+
+/* Toolbar */
+.te-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.te-example-select {
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%238a8a9a' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  font-family: inherit;
+}
+
+.te-example-select option {
+  background: var(--bg-secondary);
+  color: var(--text);
+}
+
+.type-explorer .step-toggle {
+  margin-left: auto;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+
+.type-explorer .step-toggle:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.type-explorer .step-toggle.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(74, 158, 255, 0.1);
+}
+
+/* Main layout: editor | output */
+.te-main {
+  display: flex;
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: 500px;
+}
+
+/* Editor pane */
+.te-editor-pane {
+  display: flex;
+  flex-direction: column;
+  width: 45%;
+  border-right: 1px solid var(--border);
+}
+
+.te-editor-pane label {
+  display: block;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+
+.te-editor {
+  flex: 1;
+  width: 100%;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 16px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  background: var(--bg-editor);
+  color: var(--text);
+  tab-size: 2;
+}
+
+.te-editor-display {
+  flex: 1;
+  width: 100%;
+  margin: 0;
+  border: none;
+  outline: none;
+  padding: 16px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  background: var(--bg-editor);
+  color: var(--text);
+  tab-size: 2;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.te-highlight {
+  background: rgba(74, 158, 255, 0.35);
+  outline: 1px solid rgba(74, 158, 255, 0.6);
+  border-radius: 2px;
+  color: #fff;
+}
+
+/* Output column */
+.te-output-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.te-panel-label {
+  padding: 4px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.te-panel {
+  overflow-y: auto;
+  padding: 8px 12px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  background: var(--bg-editor);
+}
+
+.te-ast-panel {
+  flex: 3;
+  border-bottom: 1px solid var(--border);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.te-scope-panel {
+  flex: 2;
+  border-bottom: 1px solid var(--border);
+}
+
+.te-warnings-panel {
+  flex: 1;
+  min-height: 60px;
+}
+
+/* Step controls */
+.te-step-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.te-step-controls button {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.te-step-controls button:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.te-step-controls .step-auto-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.te-step-controls .step-auto-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(74, 158, 255, 0.1);
+}
+
+.te-step-counter {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-left: auto;
+}
+
+/* Step info bar */
+.te-step-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  min-height: 32px;
+}
+
+.te-step-desc {
+  color: var(--text);
+  flex: 1;
+}
+
+.te-step-node {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Step badges */
+.te-step-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.te-badge-expr {
+  background: rgba(56, 178, 172, 0.2);
+  color: #4fd1c5;
+}
+
+.te-badge-stmt {
+  background: rgba(56, 178, 172, 0.1);
+  color: #81e6d9;
+  opacity: 0.8;
+}
+
+.te-badge-define {
+  background: rgba(159, 122, 234, 0.2);
+  color: #b794f4;
+}
+
+.te-badge-lookup {
+  background: rgba(66, 133, 244, 0.2);
+  color: #6ab0ff;
+}
+
+.te-badge-lookup-fail {
+  background: rgba(245, 101, 101, 0.15);
+  color: #fc8181;
+}
+
+.te-badge-op {
+  background: rgba(236, 201, 75, 0.2);
+  color: #ecc94b;
+}
+
+.te-badge-infer {
+  background: rgba(72, 187, 120, 0.2);
+  color: #68d391;
+}
+
+.te-badge-resolve {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ffb74d;
+}
+
+.te-badge-scope {
+  background: rgba(128, 128, 160, 0.15);
+  color: #8888aa;
+}
+
+.te-badge-function {
+  background: rgba(56, 178, 172, 0.25);
+  color: #4fd1c5;
+}
+
+.te-badge-check {
+  background: rgba(66, 133, 244, 0.15);
+  color: #6ab0ff;
+}
+
+.te-badge-warning {
+  background: rgba(245, 101, 101, 0.2);
+  color: #fc8181;
+}
+
+.te-badge-default {
+  background: rgba(128, 128, 160, 0.15);
+  color: #8888aa;
+}
+
+/* Type pills (color-coded) */
+.te-type-pill {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.3px;
+}
+
+.te-type-number {
+  background: rgba(66, 133, 244, 0.2);
+  color: #6ab0ff;
+}
+
+.te-type-string {
+  background: rgba(72, 187, 120, 0.2);
+  color: #68d391;
+}
+
+.te-type-boolean {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ffb74d;
+}
+
+.te-type-null,
+.te-type-undefined {
+  background: rgba(128, 128, 160, 0.15);
+  color: #8888aa;
+}
+
+.te-type-void {
+  background: rgba(128, 128, 160, 0.15);
+  color: #8888aa;
+}
+
+.te-type-any {
+  background: rgba(128, 128, 160, 0.1);
+  color: #666;
+}
+
+/* Union and function types don't have a known class, use default */
+.te-type-pill:not([class*="te-type-number"]):not([class*="te-type-string"]):not([class*="te-type-boolean"]):not([class*="te-type-null"]):not([class*="te-type-undefined"]):not([class*="te-type-void"]):not([class*="te-type-any"]) {
+  background: rgba(159, 122, 234, 0.15);
+  color: #b794f4;
+}
+
+/* AST tree */
+.te-ast-tree {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.te-ast-line {
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: pre;
+}
+
+.te-ast-indent {
+  color: var(--text-dim);
+  opacity: 0.3;
+}
+
+.te-ast-active {
+  background: rgba(74, 158, 255, 0.2);
+  color: #6ab0ff;
+  font-weight: 600;
+}
+
+.te-ast-empty {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* Scope chain */
+.te-scope-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.te-scope-card {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.te-scope-card-current {
+  border-color: rgba(56, 178, 172, 0.5);
+  background: rgba(56, 178, 172, 0.06);
+}
+
+.te-scope-card-header {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(42, 42, 74, 0.5);
+}
+
+.te-scope-card-current .te-scope-card-header {
+  color: #4fd1c5;
+  border-bottom-color: rgba(56, 178, 172, 0.25);
+}
+
+.te-scope-bindings {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.te-scope-entry {
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.te-scope-entry-new {
+  background: rgba(72, 187, 120, 0.15);
+  animation: te-new-pulse 0.6s ease-out;
+}
+
+@keyframes te-new-pulse {
+  0% { background: rgba(72, 187, 120, 0.35); }
+  100% { background: rgba(72, 187, 120, 0.15); }
+}
+
+.te-scope-name {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.te-scope-empty {
+  color: var(--text-dim);
+  font-style: italic;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.te-scope-arrow {
+  text-align: center;
+  color: rgba(56, 178, 172, 0.5);
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 0;
+}
+
+.te-scope-hint {
+  color: var(--text-dim);
+  font-style: italic;
+  font-size: 11px;
+}
+
+/* Warnings */
+.te-warning-item {
+  padding: 3px 8px;
+  font-size: 11px;
+  color: #fc8181;
+  border-radius: 3px;
+  margin-bottom: 2px;
+}
+
+.te-warning-new {
+  background: rgba(245, 101, 101, 0.1);
+  font-weight: 600;
+}
+
+.te-no-warnings {
+  color: var(--text-dim);
+  font-style: italic;
+  font-size: 11px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .te-main {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .te-editor-pane {
+    width: 100%;
+    height: 200px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .te-output-col {
+    min-height: 400px;
+  }
+
+  .home-cards {
+    flex-wrap: wrap;
+  }
+}

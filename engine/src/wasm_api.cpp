@@ -11,6 +11,7 @@
 #include "parser/ast_printer.h"
 #include "parser/parser.h"
 #include "runtime/gc.h"
+#include "typechecker/checker.h"
 #include "vm/vm.h"
 #include "vm/vm_step.h"
 
@@ -789,6 +790,189 @@ std::string run_pipeline(const std::string& source) {
   }
 }
 
+std::string typecheck_traced(const std::string& source) {
+  try {
+  // Tokenize
+  yatsi::Lexer lexer(std::string(source), "<playground>");
+  auto tokens = lexer.tokenize();
+
+  // Build line_starts table for byte offset computation
+  std::vector<size_t> line_starts;
+  line_starts.push_back(0);
+  for (size_t i = 0; i < source.size(); ++i) {
+    if (source[i] == '\n') {
+      line_starts.push_back(i + 1);
+    }
+  }
+
+  // Parse
+  yatsi::Parser parser(std::vector<yatsi::Token>(tokens), "<playground>");
+  auto program = parser.parse();
+
+  if (parser.has_errors()) {
+    std::string json = "{\"errors\":[";
+    const auto& errs = parser.errors();
+    for (size_t i = 0; i < errs.size(); ++i) {
+      if (i > 0) json += ",";
+      json += "\"" + json_escape(errs[i]) + "\"";
+    }
+    json += "],\"steps\":[],\"ast\":\"\",\"warnings\":[],\"tokens\":[]}";
+    return json;
+  }
+
+  // Typecheck with tracing
+  std::vector<yatsi::TypeCheckerStep> trace;
+  yatsi::TypeChecker checker;
+  checker.enable_tracing(trace);
+  checker.check(program);
+
+  // Get typed AST
+  std::ostringstream ast_out;
+  yatsi::print_typed_ast(program, ast_out);
+  std::string ast_str = ast_out.str();
+
+  // Serialize steps
+  std::string json = "{\"steps\":[";
+  for (size_t i = 0; i < trace.size(); ++i) {
+    const auto& step = trace[i];
+    if (i > 0) json += ",";
+    json += "{\"type\":\"";
+    switch (step.type) {
+    case yatsi::TypeCheckerStep::Type::EnterScope:          json += "enterScope"; break;
+    case yatsi::TypeCheckerStep::Type::ExitScope:           json += "exitScope"; break;
+    case yatsi::TypeCheckerStep::Type::DefineVariable:      json += "defineVariable"; break;
+    case yatsi::TypeCheckerStep::Type::LookupVariable:      json += "lookupVariable"; break;
+    case yatsi::TypeCheckerStep::Type::LookupVariableFail:  json += "lookupVariableFail"; break;
+    case yatsi::TypeCheckerStep::Type::ResolveAnnotation:   json += "resolveAnnotation"; break;
+    case yatsi::TypeCheckerStep::Type::InferFromLiteral:    json += "inferFromLiteral"; break;
+    case yatsi::TypeCheckerStep::Type::InferFromInitializer:json += "inferFromInitializer"; break;
+    case yatsi::TypeCheckerStep::Type::EnterExpr:           json += "enterExpr"; break;
+    case yatsi::TypeCheckerStep::Type::ExitExpr:            json += "exitExpr"; break;
+    case yatsi::TypeCheckerStep::Type::EnterStmt:           json += "enterStmt"; break;
+    case yatsi::TypeCheckerStep::Type::ExitStmt:            json += "exitStmt"; break;
+    case yatsi::TypeCheckerStep::Type::CheckBinaryOp:       json += "checkBinaryOp"; break;
+    case yatsi::TypeCheckerStep::Type::CheckUnaryOp:        json += "checkUnaryOp"; break;
+    case yatsi::TypeCheckerStep::Type::EnterFunction:       json += "enterFunction"; break;
+    case yatsi::TypeCheckerStep::Type::ExitFunction:        json += "exitFunction"; break;
+    case yatsi::TypeCheckerStep::Type::DefineParam:         json += "defineParam"; break;
+    case yatsi::TypeCheckerStep::Type::SetReturnType:       json += "setReturnType"; break;
+    case yatsi::TypeCheckerStep::Type::CheckReturnValue:    json += "checkReturnValue"; break;
+    case yatsi::TypeCheckerStep::Type::CheckCallArgs:       json += "checkCallArgs"; break;
+    case yatsi::TypeCheckerStep::Type::Warning:             json += "warning"; break;
+    }
+    json += "\",\"depth\":";
+    json += std::to_string(step.depth);
+    json += ",\"nodeType\":\"";
+    json += json_escape(step.node_type);
+    json += "\",\"desc\":\"";
+    json += json_escape(step.description);
+    json += "\"";
+    if (!step.variable_name.empty()) {
+      json += ",\"variableName\":\"";
+      json += json_escape(step.variable_name);
+      json += "\"";
+    }
+    if (!step.type_result.empty()) {
+      json += ",\"typeResult\":\"";
+      json += json_escape(step.type_result);
+      json += "\"";
+    }
+    if (!step.expected_type.empty()) {
+      json += ",\"expectedType\":\"";
+      json += json_escape(step.expected_type);
+      json += "\"";
+    }
+    if (!step.actual_type.empty()) {
+      json += ",\"actualType\":\"";
+      json += json_escape(step.actual_type);
+      json += "\"";
+    }
+    if (!step.operator_kind.empty()) {
+      json += ",\"operatorKind\":\"";
+      json += json_escape(step.operator_kind);
+      json += "\"";
+    }
+    if (step.source_line >= 0) {
+      json += ",\"line\":";
+      json += std::to_string(step.source_line);
+    }
+    if (step.source_column >= 0) {
+      json += ",\"col\":";
+      json += std::to_string(step.source_column);
+    }
+    if (!step.scope_label.empty()) {
+      json += ",\"scopeLabel\":\"";
+      json += json_escape(step.scope_label);
+      json += "\"";
+    }
+    if (!step.scope_bindings.empty()) {
+      json += ",\"scopeBindings\":[";
+      for (size_t j = 0; j < step.scope_bindings.size(); ++j) {
+        if (j > 0) json += ",";
+        json += "{\"name\":\"";
+        json += json_escape(step.scope_bindings[j].first);
+        json += "\",\"type\":\"";
+        json += json_escape(step.scope_bindings[j].second);
+        json += "\"}";
+      }
+      json += "]";
+    }
+    json += "}";
+  }
+
+  // Serialize tokens
+  json += "],\"tokens\":[";
+  for (size_t i = 0; i < tokens.size(); ++i) {
+    const auto& tok = tokens[i];
+    if (i > 0) json += ",";
+
+    size_t start = 0;
+    if (tok.location.line >= 1 &&
+        static_cast<size_t>(tok.location.line - 1) < line_starts.size()) {
+      start = line_starts[tok.location.line - 1] +
+              (tok.location.column > 0 ? tok.location.column - 1 : 0);
+    }
+    size_t end = start;
+    if (tok.kind != yatsi::TokenKind::EndOfFile &&
+        tok.kind != yatsi::TokenKind::Error) {
+      end = start + tok.lexeme.size();
+    }
+
+    json += "{\"kind\":\"";
+    json += json_escape(std::string(yatsi::token_kind_to_string(tok.kind)));
+    json += "\",\"lexeme\":\"";
+    json += json_escape(tok.lexeme);
+    json += "\",\"line\":";
+    json += std::to_string(tok.location.line);
+    json += ",\"column\":";
+    json += std::to_string(tok.location.column);
+    json += ",\"start\":";
+    json += std::to_string(start);
+    json += ",\"end\":";
+    json += std::to_string(end);
+    json += "}";
+  }
+
+  // AST
+  json += "],\"ast\":\"";
+  json += json_escape(ast_str);
+
+  // Warnings
+  json += "\",\"warnings\":[";
+  const auto& warns = checker.warnings();
+  for (size_t i = 0; i < warns.size(); ++i) {
+    if (i > 0) json += ",";
+    json += "\"" + json_escape(warns[i]) + "\"";
+  }
+  json += "],\"errors\":[]}";
+  return json;
+  } catch (const std::exception& e) {
+    return "{\"errors\":[\"" + json_escape(e.what()) + "\"],\"steps\":[],\"ast\":\"\",\"warnings\":[],\"tokens\":[]}";
+  } catch (...) {
+    return "{\"errors\":[\"unknown exception\"],\"steps\":[],\"ast\":\"\",\"warnings\":[],\"tokens\":[]}";
+  }
+}
+
 } // namespace
 
 EMSCRIPTEN_BINDINGS(yatsi_playground) {
@@ -797,4 +981,5 @@ EMSCRIPTEN_BINDINGS(yatsi_playground) {
   emscripten::function("parse_traced", &parse_traced);
   emscripten::function("compile_traced", &compile_traced);
   emscripten::function("execute_traced", &execute_traced);
+  emscripten::function("typecheck_traced", &typecheck_traced);
 }
