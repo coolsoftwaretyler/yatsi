@@ -5,3 +5,4 @@ engine/build-native/
 engine/build-cli/
 *.log
 .DS_Store
+scratch/
