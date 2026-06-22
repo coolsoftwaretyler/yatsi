@@ -45,6 +45,10 @@ public:
   bool is_function() const;
   class JsFunction* as_function() const;
 
+  // Object convenience
+  bool is_js_object() const;
+  class JsObject* as_js_object() const;
+
   ValueKind kind() const { return kind_; }
 
   // JS semantics
