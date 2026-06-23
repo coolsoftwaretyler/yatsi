@@ -2,6 +2,7 @@
 
 #include "runtime/heap_object.h"
 #include "runtime/js_function.h"
+#include "runtime/js_object.h"
 #include "runtime/js_string.h"
 
 #include <limits>
@@ -75,6 +76,16 @@ JsString *Value::as_string() const {
 bool Value::is_function() const {
   return is_object() && object_ &&
          object_->heap_kind() == HeapObjectKind::Function;
+}
+
+bool Value::is_js_object() const {
+  return is_object() && object_ &&
+         object_->heap_kind() == HeapObjectKind::Object;
+}
+
+JsObject *Value::as_js_object() const {
+  assert(is_js_object() && "Value is not an object");
+  return static_cast<JsObject *>(object_);
 }
 
 JsFunction *Value::as_function() const {
@@ -231,6 +242,18 @@ std::string Value::to_debug_string() const {
       return "\"" + as_string()->to_utf8() + "\"";
     if (is_function())
       return "<function " + as_function()->prototype()->name + ">";
+    if (is_js_object()) {
+      std::string result = "{ ";
+      auto *obj = as_js_object();
+      bool first = true;
+      for (const auto &[key, val] : obj->properties()) {
+        if (!first) result += ", ";
+        result += key + ": " + val.to_debug_string();
+        first = false;
+      }
+      result += " }";
+      return result;
+    }
     return "<object>";
   }
   return "<unknown>";
@@ -259,6 +282,18 @@ std::string Value::to_print_string() const {
     if (is_function())
       return "function " + as_function()->prototype()->name +
              "() { [native code] }";
+    if (is_js_object()) {
+      std::string result = "{ ";
+      auto *obj = as_js_object();
+      bool first = true;
+      for (const auto &[key, val] : obj->properties()) {
+        if (!first) result += ", ";
+        result += key + ": " + val.to_print_string();
+        first = false;
+      }
+      result += " }";
+      return result;
+    }
     return "[object Object]";
   }
   return "undefined";

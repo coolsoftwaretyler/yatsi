@@ -912,6 +912,33 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
                 dest = val_reg;
               }
             }
+          } else if (auto *member = std::get_if<MemberExpr>(&*node.target)) {
+            // If we're in an assignment expression node and it's a MemberExpr,
+            // obj['x'] = 10
+            // obj.x = 10
+            // First we need to compile the expression for the member
+            uint8_t obj_reg = compile_expr(*member->object);
+            // Then we need to compile the expression of the value we'll be assigning
+            uint8_t val_reg = compile_expr(*node.value);
+            // If the member access is something like obj['x'], it's computed,
+            // so we need to compile the bracket expression to get a register holding the key value,
+            // then we use that register in SetIndex.
+            // Then we emit SetIndex based on the object register, the index into the compiled
+            // computed value, and the value
+            if (member->is_computed) {
+              uint8_t idx_reg = compile_expr(*member->computed);
+              emit_abc(OpCode::SetIndex, obj_reg, idx_reg, val_reg);
+            } else {
+              // Otherwise, we are doing a dot notation like obj.x,
+              // so we add a key index, then emit an opcode to set a prop,
+              // where the A register is where the object is, the b register is a uint8_t of the key index,
+              // and the C register is the value we're setting
+              uint16_t key_idx = add_string_constant(member->property);
+              emit_abc(OpCode::SetProp, obj_reg, static_cast<uint8_t>(key_idx),
+                       val_reg);
+            }
+            // Finally, we make sure to put the destination as the value register
+            dest = val_reg;
           } else {
             dest = allocate_register();
             std::cerr
@@ -989,8 +1016,25 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           TraceNode tn(trace_, &trace_depth_, "MemberExpr",
                        node.is_computed ? "[]" : "." + node.property,
                        expr.location.line, expr.location.column);
+          // First we need to compile the object itself
+          uint8_t obj_reg = compile_expr(*node.object);
+          // Then we allocate a destination register for the member access to
+          // point to
           dest = allocate_register();
-          std::cerr << "warning: MemberExpr not yet compiled\n";
+          // We either want to get a property (i.e. dot notation),
+          // or we need to get an index based on a computed expression.
+          // So first we check to see if the AST node has `is_computed = true`
+          if (node.is_computed) {
+            // If it's computed,w e need to compile the computed part of the
+            // node
+            uint8_t idx_reg = compile_expr(*node.computed);
+            emit_abc(OpCode::GetIndex, dest, obj_reg, idx_reg);
+          } else {
+            // Otherwise, we can just emit a GetProp with the node's value
+            uint16_t key_idx = add_string_constant(node.property);
+            emit_abc(OpCode::GetProp, dest, obj_reg,
+                     static_cast<uint8_t>(key_idx));
+          }
 
         } else if constexpr (std::is_same_v<T, ArrayLiteral>) {
           TraceNode tn(trace_, &trace_depth_, "ArrayLiteral", "",
@@ -1002,7 +1046,28 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
           TraceNode tn(trace_, &trace_depth_, "ObjectLiteral", "",
                        expr.location.line, expr.location.column);
           dest = allocate_register();
-          std::cerr << "warning: ObjectLiteral not yet compiled\n";
+          emit_abc(OpCode::NewObject, dest, 0, 0);
+          for (const auto &prop : node.properties) {
+            // We need the key name to be a string, so allocate key_name as such
+            std::string key_name;
+            if (auto *ident = std::get_if<Identifier>(&*prop.key)) {
+              // If the prop reference key is an Identifier, we need to use that
+              // identifier's name field
+              key_name = ident->name;
+            } else if (auto *str = std::get_if<StringLiteral>(&*prop.key)) {
+              // If the prop's key field is a string literal, we use its value
+              key_name = str->value;
+            }
+            // Add a string constant to the constant pool for the key name
+            // (derived from identifier->name or stringliteratl->value)
+            uint16_t key_idx = add_string_constant(key_name);
+            // Compile the expression of the property node's value
+            uint8_t val_reg = compile_expr(*prop.value);
+            // Emit an opcode to SetProp, where the value register is being
+            // mapped to the key index in the destination register.
+            emit_abc(OpCode::SetProp, dest, static_cast<uint8_t>(key_idx),
+                     val_reg);
+          }
 
         } else if constexpr (std::is_same_v<T, ArrowFunction>) {
           TraceNode tn(trace_, &trace_depth_, "ArrowFunction", "",

@@ -23,6 +23,7 @@ set(YATSI_CORE_SOURCES
     src/typechecker/type_env.cpp
     src/typechecker/checker.cpp
     src/vm/vm.cpp
+    src/runtime/js_object.cpp
 )
 
 if(EMSCRIPTEN)
