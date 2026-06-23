@@ -242,6 +242,18 @@ std::string Value::to_debug_string() const {
       return "\"" + as_string()->to_utf8() + "\"";
     if (is_function())
       return "<function " + as_function()->prototype()->name + ">";
+    if (is_js_object()) {
+      std::string result = "{ ";
+      auto *obj = as_js_object();
+      bool first = true;
+      for (const auto &[key, val] : obj->properties()) {
+        if (!first) result += ", ";
+        result += key + ": " + val.to_debug_string();
+        first = false;
+      }
+      result += " }";
+      return result;
+    }
     return "<object>";
   }
   return "<unknown>";
@@ -270,6 +282,18 @@ std::string Value::to_print_string() const {
     if (is_function())
       return "function " + as_function()->prototype()->name +
              "() { [native code] }";
+    if (is_js_object()) {
+      std::string result = "{ ";
+      auto *obj = as_js_object();
+      bool first = true;
+      for (const auto &[key, val] : obj->properties()) {
+        if (!first) result += ", ";
+        result += key + ": " + val.to_print_string();
+        first = false;
+      }
+      result += " }";
+      return result;
+    }
     return "[object Object]";
   }
   return "undefined";
