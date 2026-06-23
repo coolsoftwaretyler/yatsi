@@ -1,6 +1,8 @@
 #include "vm/vm.h"
 
+#include "compiler/bytecode.h"
 #include "runtime/js_function.h"
+#include "runtime/js_object.h"
 #include "runtime/js_string.h"
 
 #include <cmath>
@@ -844,6 +846,93 @@ InterpretResult VM::execute(BytecodeFunction &func) {
       if (call_stack_.empty())
         return InterpretResult::Ok;
       registers_[callee_base - 1] = Value::undefined();
+      break;
+    }
+
+    case OpCode::NewObject: {
+      // New objects get allocated through the garbage collector
+      auto *obj = gc_.allocate<JsObject>();
+      // We put the object into the instructions' A register as a Value
+      reg(instr.a()) = Value::object(obj);
+      break;
+    }
+
+    case OpCode::GetProp: {
+      // For GetProp, the destination is the A register,
+      // the object is in the B register, and the key index is in the C register
+      // We know whatver's in instr.b() should be a JsObject, so let's get that
+      JsObject *obj = reg(instr.b()).as_js_object();
+      // Then we need to access the object's properties by key,
+      // which will exist in this call frame's function's constants,
+      // based on the value in the instruction's C register.
+      std::string key =
+          cf.function->constants[instr.c()].as_string()->to_utf8();
+      // We will get a Value of some sort and put it in result (unless we return
+      // undefined)
+      Value result;
+      // If we successfully get by the key, then we put the result in instr.a()
+      if (obj->get(key, result)) {
+        reg(instr.a()) = result;
+      } else {
+        // If we could not successfully call get, then the value is undefined
+        reg(instr.a()) = Value::undefined();
+      }
+      break;
+    }
+
+    case OpCode::SetProp: {
+      // When we want to set a prop on an object,
+      // the instruction looks like this:
+      // a: the register where the object is
+      // b: the index of the key we're going to set
+      // c: the value we're setting in to it
+      // So first, let's get the object as a JsObject pointer
+      JsObject *obj = reg(instr.a()).as_js_object();
+      // Next, we can get the key we want to use from instr.b()
+      std::string key =
+          cf.function->constants[instr.b()].as_string()->to_utf8();
+      // Then we access the Value that instr.c() is pointing to
+      Value val = reg(instr.c());
+      // Now we call the set method on the JsObject
+      obj->set(key, val);
+      break;
+    }
+
+    case OpCode::GetIndex: {
+      // We evaluate this OpCode when evaluating bracket notation like
+      // obj[computedvalue] The instruction should look like this: a:
+      // destination register for the value b: object register c: register for
+      // the compiled expression we're using to index into the object So first,
+      // we get the object
+      JsObject *obj = reg(instr.b()).as_js_object();
+      // Then we have to get the key as a string
+      // TODO: handle numeric keys when we get to array support
+      std::string key = reg(instr.c()).as_string()->to_utf8();
+      Value result;
+      // And we get the value and return it, or undefined if it doesn't exist
+      if (obj->get(key, result)) {
+        reg(instr.a()) = result;
+      } else {
+        reg(instr.a()) = Value::undefined();
+      }
+      break;
+    }
+
+    case OpCode::SetIndex: {
+      // Use this OpCode when setting a value on an object by indexing through a property
+      // like obj[someProp]
+      // The instruction has these properties:
+      // a: register where the object is
+      // b: the register with the compiled index
+      // c: the register with the value we're setting
+      // As ever, we get the JsObject out of a
+      JsObject* obj = reg(instr.a()).as_js_object();
+      // Then we figure out the key we want to use
+      std::string key = reg(instr.b()).as_string()->to_utf8();
+      // Finally, we need the value we're setting
+      Value val = reg(instr.c());
+      // Set it and call it a day.
+      obj->set(key, val);
       break;
     }
 
