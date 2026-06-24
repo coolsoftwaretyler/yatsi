@@ -1,6 +1,7 @@
 #include "common/value.h"
 
 #include "runtime/heap_object.h"
+#include "runtime/js_array.h"
 #include "runtime/js_function.h"
 #include "runtime/js_object.h"
 #include "runtime/js_string.h"
@@ -78,6 +79,11 @@ bool Value::is_function() const {
          object_->heap_kind() == HeapObjectKind::Function;
 }
 
+JsFunction *Value::as_function() const {
+  assert(is_function() && "Value is not a function");
+  return static_cast<JsFunction *>(object_);
+}
+
 bool Value::is_js_object() const {
   return is_object() && object_ &&
          object_->heap_kind() == HeapObjectKind::Object;
@@ -88,9 +94,14 @@ JsObject *Value::as_js_object() const {
   return static_cast<JsObject *>(object_);
 }
 
-JsFunction *Value::as_function() const {
-  assert(is_function() && "Value is not a function");
-  return static_cast<JsFunction *>(object_);
+bool Value::is_js_array() const {
+  return is_js_array() && object_ &&
+         object_->heap_kind() == HeapObjectKind::Array;
+}
+
+JsArray *Value::as_js_array() const {
+  assert(is_js_array() && "Value is not an array");
+  return static_cast<JsArray *>(object_);
 }
 
 // --- JS truthiness ---
@@ -247,7 +258,8 @@ std::string Value::to_debug_string() const {
       auto *obj = as_js_object();
       bool first = true;
       for (const auto &[key, val] : obj->properties()) {
-        if (!first) result += ", ";
+        if (!first)
+          result += ", ";
         result += key + ": " + val.to_debug_string();
         first = false;
       }
@@ -287,7 +299,8 @@ std::string Value::to_print_string() const {
       auto *obj = as_js_object();
       bool first = true;
       for (const auto &[key, val] : obj->properties()) {
-        if (!first) result += ", ";
+        if (!first)
+          result += ", ";
         result += key + ": " + val.to_print_string();
         first = false;
       }
