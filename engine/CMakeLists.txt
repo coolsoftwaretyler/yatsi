@@ -24,6 +24,7 @@ set(YATSI_CORE_SOURCES
     src/typechecker/checker.cpp
     src/vm/vm.cpp
     src/runtime/js_object.cpp
+    src/runtime/js_array.cpp
 )
 
 if(EMSCRIPTEN)
