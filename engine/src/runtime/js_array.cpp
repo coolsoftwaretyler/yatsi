@@ -32,4 +32,11 @@ bool JsArray::get(size_t index, Value &out) const {
 
 // Length is also a simple wrapper around std::vector::size
 size_t JsArray::length() const { return items_.size(); }
+
+// Mark all elements so the GC doesn't sweep them
+void JsArray::trace(GarbageCollector &gc) {
+  for (auto &val : items_) {
+    gc.mark_value(val);
+  }
+}
 } // namespace yatsi

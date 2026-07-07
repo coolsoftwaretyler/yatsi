@@ -13,6 +13,7 @@ public:
   void set(size_t index, Value val);
   bool get(size_t index, Value &out) const;
   size_t length() const;
+  const std::vector<Value> &items() const { return items_; }
   void trace(GarbageCollector &gc) override;
 
 private:

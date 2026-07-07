@@ -95,7 +95,7 @@ JsObject *Value::as_js_object() const {
 }
 
 bool Value::is_js_array() const {
-  return is_js_array() && object_ &&
+  return is_object() && object_ &&
          object_->heap_kind() == HeapObjectKind::Array;
 }
 
@@ -253,6 +253,19 @@ std::string Value::to_debug_string() const {
       return "\"" + as_string()->to_utf8() + "\"";
     if (is_function())
       return "<function " + as_function()->prototype()->name + ">";
+    if (is_js_array()) {
+      std::string result = "[ ";
+      auto *arr = as_js_array();
+      bool first = true;
+      for (const auto &val : arr->items()) {
+        if (!first)
+          result += ", ";
+        result += val.to_debug_string();
+        first = false;
+      }
+      result += " ]";
+      return result;
+    }
     if (is_js_object()) {
       std::string result = "{ ";
       auto *obj = as_js_object();
@@ -294,6 +307,19 @@ std::string Value::to_print_string() const {
     if (is_function())
       return "function " + as_function()->prototype()->name +
              "() { [native code] }";
+    if (is_js_array()) {
+      std::string result = "[ ";
+      auto *arr = as_js_array();
+      bool first = true;
+      for (const auto &val : arr->items()) {
+        if (!first)
+          result += ", ";
+        result += val.to_print_string();
+        first = false;
+      }
+      result += " ]";
+      return result;
+    }
     if (is_js_object()) {
       std::string result = "{ ";
       auto *obj = as_js_object();

@@ -918,26 +918,29 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
             // obj.x = 10
             // First we need to compile the expression for the member
             uint8_t obj_reg = compile_expr(*member->object);
-            // Then we need to compile the expression of the value we'll be assigning
+            // Then we need to compile the expression of the value we'll be
+            // assigning
             uint8_t val_reg = compile_expr(*node.value);
             // If the member access is something like obj['x'], it's computed,
-            // so we need to compile the bracket expression to get a register holding the key value,
-            // then we use that register in SetIndex.
-            // Then we emit SetIndex based on the object register, the index into the compiled
-            // computed value, and the value
+            // so we need to compile the bracket expression to get a register
+            // holding the key value, then we use that register in SetIndex.
+            // Then we emit SetIndex based on the object register, the index
+            // into the compiled computed value, and the value
             if (member->is_computed) {
               uint8_t idx_reg = compile_expr(*member->computed);
               emit_abc(OpCode::SetIndex, obj_reg, idx_reg, val_reg);
             } else {
               // Otherwise, we are doing a dot notation like obj.x,
               // so we add a key index, then emit an opcode to set a prop,
-              // where the A register is where the object is, the b register is a uint8_t of the key index,
-              // and the C register is the value we're setting
+              // where the A register is where the object is, the b register is
+              // a uint8_t of the key index, and the C register is the value
+              // we're setting
               uint16_t key_idx = add_string_constant(member->property);
               emit_abc(OpCode::SetProp, obj_reg, static_cast<uint8_t>(key_idx),
                        val_reg);
             }
-            // Finally, we make sure to put the destination as the value register
+            // Finally, we make sure to put the destination as the value
+            // register
             dest = val_reg;
           } else {
             dest = allocate_register();
@@ -1039,8 +1042,25 @@ uint8_t Compiler::compile_expr(const Expr &expr) {
         } else if constexpr (std::is_same_v<T, ArrayLiteral>) {
           TraceNode tn(trace_, &trace_depth_, "ArrayLiteral", "",
                        expr.location.line, expr.location.column);
+          // Allocate a register where we'll put the newly created array
           dest = allocate_register();
-          std::cerr << "warning: ArrayLiteral not yet compiled\n";
+          // Emit an opcode for NewArray, with the a operand pointing to dest. B
+          // and C are 0, won't be used
+          emit_abc(OpCode::NewArray, dest, 0, 0);
+
+          // Loop through all the elements provided in the AST node,
+          // compile them, and emit SetIndex opcodes for each one
+          // At each index, we allocate a register for the index constant and load it,
+          // to keep SetIndex the same across objects and arrays.
+          // TODO; we can probably optimize by adding an array-only opcode.
+          for (size_t i = 0; i < node.elements.size(); ++i) {
+            uint8_t val_reg = compile_expr(*node.elements[i]);
+            uint8_t idx_reg = allocate_register();
+            uint16_t idx_const =
+                add_constant(Value::number(static_cast<double>(i)));
+            emit_abx(OpCode::LoadConst, idx_reg, idx_const);
+            emit_abc(OpCode::SetIndex, dest, idx_reg, val_reg);
+          }
 
         } else if constexpr (std::is_same_v<T, ObjectLiteral>) {
           TraceNode tn(trace_, &trace_depth_, "ObjectLiteral", "",
