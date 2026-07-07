@@ -1,6 +1,7 @@
 #include "vm/vm.h"
 
 #include "compiler/bytecode.h"
+#include "runtime/js_array.h"
 #include "runtime/js_function.h"
 #include "runtime/js_object.h"
 #include "runtime/js_string.h"
@@ -857,6 +858,14 @@ InterpretResult VM::execute(BytecodeFunction &func) {
       break;
     }
 
+    case OpCode::NewArray: {
+      // New arrays need to get allocated through gc
+      auto *arr = gc_.allocate<JsArray>();
+      // Put the array into the instructions' A register
+      reg(instr.a()) = Value::object(arr);
+      break;
+    }
+
     case OpCode::GetProp: {
       // For GetProp, the destination is the A register,
       // the object is in the B register, and the key index is in the C register
@@ -899,40 +908,65 @@ InterpretResult VM::execute(BytecodeFunction &func) {
     }
 
     case OpCode::GetIndex: {
-      // We evaluate this OpCode when evaluating bracket notation like
-      // obj[computedvalue] The instruction should look like this: a:
-      // destination register for the value b: object register c: register for
-      // the compiled expression we're using to index into the object So first,
-      // we get the object
-      JsObject *obj = reg(instr.b()).as_js_object();
-      // Then we have to get the key as a string
-      // TODO: handle numeric keys when we get to array support
-      std::string key = reg(instr.c()).as_string()->to_utf8();
-      Value result;
-      // And we get the value and return it, or undefined if it doesn't exist
-      if (obj->get(key, result)) {
-        reg(instr.a()) = result;
+      // This opcode may come from object or array access,
+      // i.e.
+      // const a = [1,2,3]; const b = a[0];
+      // const o = {0: 'something'}; const c = o[0];
+      // So before we do anything, we need to check if the b register points to
+      // an array or an object
+      bool is_object = reg(instr.b()).is_js_object();
+
+      if (is_object) {
+        // We evaluate this OpCode when evaluating bracket notation like
+        // obj[computedvalue] The instruction should look like this: a:
+        // destination register for the value b: object register c: register for
+        // the compiled expression we're using to index into the object So
+        // first, we get the object
+        JsObject *obj = reg(instr.b()).as_js_object();
+        // Then we have to get the key as a string
+        std::string key = reg(instr.c()).as_string()->to_utf8();
+        Value result;
+        // And we get the value and return it, or undefined if it doesn't exist
+        if (obj->get(key, result)) {
+          reg(instr.a()) = result;
+        } else {
+          reg(instr.a()) = Value::undefined();
+        }
       } else {
-        reg(instr.a()) = Value::undefined();
+        // In this case, the instruction b register points to an array,
+        // and we need to access it via numeric index
+        JsArray *arr = reg(instr.b()).as_js_array();
+        // Now we have to convert the key to size_t
+        size_t key = static_cast<size_t>(reg(instr.c()).as_number());
+        Value result;
+        // Finally, get the value and return it, or undefined if it doesn't
+        // exist
+        if (arr->get(key, result)) {
+          reg(instr.a()) = result;
+        } else {
+          reg(instr.a()) = Value::undefined();
+        }
       }
       break;
     }
 
     case OpCode::SetIndex: {
-      // Use this OpCode when setting a value on an object by indexing through a property
-      // like obj[someProp]
-      // The instruction has these properties:
-      // a: register where the object is
-      // b: the register with the compiled index
-      // c: the register with the value we're setting
-      // As ever, we get the JsObject out of a
-      JsObject* obj = reg(instr.a()).as_js_object();
-      // Then we figure out the key we want to use
-      std::string key = reg(instr.b()).as_string()->to_utf8();
-      // Finally, we need the value we're setting
+      // Use this OpCode when setting a value on an object or array by bracket
+      // notation like obj[someProp] or arr[0]
+      // a: register where the object/array is
+      // b: register with the compiled index
+      // c: register with the value we're setting
       Value val = reg(instr.c());
-      // Set it and call it a day.
-      obj->set(key, val);
+
+      if (reg(instr.a()).is_js_object()) {
+        JsObject *obj = reg(instr.a()).as_js_object();
+        std::string key = reg(instr.b()).as_string()->to_utf8();
+        obj->set(key, val);
+      } else {
+        JsArray *arr = reg(instr.a()).as_js_array();
+        size_t index = static_cast<size_t>(reg(instr.b()).as_number());
+        arr->set(index, val);
+      }
       break;
     }
 

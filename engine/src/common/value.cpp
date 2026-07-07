@@ -1,6 +1,7 @@
 #include "common/value.h"
 
 #include "runtime/heap_object.h"
+#include "runtime/js_array.h"
 #include "runtime/js_function.h"
 #include "runtime/js_object.h"
 #include "runtime/js_string.h"
@@ -78,6 +79,11 @@ bool Value::is_function() const {
          object_->heap_kind() == HeapObjectKind::Function;
 }
 
+JsFunction *Value::as_function() const {
+  assert(is_function() && "Value is not a function");
+  return static_cast<JsFunction *>(object_);
+}
+
 bool Value::is_js_object() const {
   return is_object() && object_ &&
          object_->heap_kind() == HeapObjectKind::Object;
@@ -88,9 +94,14 @@ JsObject *Value::as_js_object() const {
   return static_cast<JsObject *>(object_);
 }
 
-JsFunction *Value::as_function() const {
-  assert(is_function() && "Value is not a function");
-  return static_cast<JsFunction *>(object_);
+bool Value::is_js_array() const {
+  return is_object() && object_ &&
+         object_->heap_kind() == HeapObjectKind::Array;
+}
+
+JsArray *Value::as_js_array() const {
+  assert(is_js_array() && "Value is not an array");
+  return static_cast<JsArray *>(object_);
 }
 
 // --- JS truthiness ---
@@ -242,12 +253,26 @@ std::string Value::to_debug_string() const {
       return "\"" + as_string()->to_utf8() + "\"";
     if (is_function())
       return "<function " + as_function()->prototype()->name + ">";
+    if (is_js_array()) {
+      std::string result = "[ ";
+      auto *arr = as_js_array();
+      bool first = true;
+      for (const auto &val : arr->items()) {
+        if (!first)
+          result += ", ";
+        result += val.to_debug_string();
+        first = false;
+      }
+      result += " ]";
+      return result;
+    }
     if (is_js_object()) {
       std::string result = "{ ";
       auto *obj = as_js_object();
       bool first = true;
       for (const auto &[key, val] : obj->properties()) {
-        if (!first) result += ", ";
+        if (!first)
+          result += ", ";
         result += key + ": " + val.to_debug_string();
         first = false;
       }
@@ -282,12 +307,26 @@ std::string Value::to_print_string() const {
     if (is_function())
       return "function " + as_function()->prototype()->name +
              "() { [native code] }";
+    if (is_js_array()) {
+      std::string result = "[ ";
+      auto *arr = as_js_array();
+      bool first = true;
+      for (const auto &val : arr->items()) {
+        if (!first)
+          result += ", ";
+        result += val.to_print_string();
+        first = false;
+      }
+      result += " ]";
+      return result;
+    }
     if (is_js_object()) {
       std::string result = "{ ";
       auto *obj = as_js_object();
       bool first = true;
       for (const auto &[key, val] : obj->properties()) {
-        if (!first) result += ", ";
+        if (!first)
+          result += ", ";
         result += key + ": " + val.to_print_string();
         first = false;
       }
